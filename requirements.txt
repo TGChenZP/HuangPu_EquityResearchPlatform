@@ -1,3 +1,7 @@
 yfinance
 pandas
 numpy
+fpdf
+numpy
+matplotlib
+fpdf
