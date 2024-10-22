@@ -315,38 +315,6 @@ def get_historical_prices(
     return historical_prices
 
 
-# def get_gics_industry_weighted_mean(return_df_dict: dict, TICKER: str, my_portfolio_tickers: list, same_gics_industry_weight_dict: dict, index_tickers: list, mode: str, **kwargs) -> pd.DataFrame:
-
-#     GICS_Industry_Weighted_Mean = dd(float)
-
-#     # Iterate through each ticker in the portfolio
-#     for ticker in my_portfolio_tickers:
-#         # Skip the index tickers and the main TICKER
-#         if ticker not in index_tickers + [TICKER]:
-#             # Iterate through the dates of the return data for the ticker
-#             for date in return_df_dict[ticker].index:
-#                 # Check if the return value is not NaN
-
-#                 if not pd.isna(return_df_dict[ticker].loc[date].values[0]):
-#                     # Sum the weighted returns for the GICS industry by date
-#                     GICS_Industry_Weighted_Mean[date] += same_gics_industry_weight_dict[ticker] * \
-#                         return_df_dict[ticker].loc[date].values[0]
-
-#     # Create a DataFrame to store the results
-#     weighted_mean_df = pd.DataFrame.from_dict(
-#         GICS_Industry_Weighted_Mean, orient='index', columns=[f'{mode}_Return (%)'])
-#     return_df_dict['GICS Industry Weighted Mean'] = weighted_mean_df
-
-#     # make sure every time index of TICKER df is in the return_df_dict, if not, add the timestamp with NaN value to GICS Industry Weighted Mean
-#     for date in return_df_dict[TICKER].index:
-#         if date not in weighted_mean_df.index:
-#             weighted_mean_df.loc[date] = np.nan
-
-#     return_df_dict['GICS Industry Weighted Mean'] = weighted_mean_df.sort_index()
-
-#     return return_df_dict
-
-
 def get_gics_industry_weighted_mean(
     return_df_dict: dict,
     TICKER: str,
@@ -693,7 +661,3 @@ def plot_close_price_with_dollar_lines(TICKER: str, historical_prices: dict):
 
     # Show the plot
     plt.show()
-
-
-# Example usage:
-# plot_close_price_with_dollar_lines('AAPL', historical_prices)
