@@ -1,3 +1,4 @@
+import pandas as pd
 from functions.init import *
 
 
@@ -53,55 +54,158 @@ def get_prices(
     return price_df
 
 
-def get_return(price_df: pd.DataFrame, interval: str = "M") -> pd.DataFrame:
+def get_return(price_df: pd.DataFrame, interest_rate: pd.DataFrame, interval: str = "M") -> pd.DataFrame:
     """
-    Get return of stock on a monthly basis (last close price/last close price previous period - 1)
+    Get return of stock on a specified interval basis (last close price/last close price previous period - 1)
 
-        - pride_df: pd.DataFrame
-        - interval: str (default='M')
+    Parameters:
+    - price_df: pd.DataFrame - DataFrame with stock prices (must have a 'Close' column and a DateTime index)
+    - interest_rate: pd.DataFrame - DataFrame with interest rates
+    - interval: str - Resampling interval ('M' for monthly, 'Q' for quarterly, 'Y' for yearly)
+
+    Returns:
+    - pd.DataFrame with stock returns and interest rate for each period
     """
     assert interval in ["M", "Q", "Y"], "interval must be M, Q or Y"
 
-    # find the last close price of each period
+    # Resample to get the last close price of each period
     last_close_price = price_df.resample(interval).last()
 
-    # calculate the return
+    # Calculate the return
     return_series = last_close_price["Close"].pct_change() * 100
-
-    # turn into a dataframe
-    return_series = return_series.to_frame()
-
-    return_series.columns = [f"{interval}_Return (%)"]
-    # set index to month
+    return_series = return_series.to_frame(name=f"{interval}_Return (%)")
+    # Format the index to display period correctly
     if interval == "Y":
-        return_series.index = return_series.index.strftime("%Y")
+        return_series.index = return_series.index.to_period("Y").strftime("%Y")
+        return_series['merge_use_Y-M'] = return_series.index
+
+        interest_rate['merge_use_Y-M'] = interest_rate.index.to_period(
+            "Y").strftime("%Y")
+
     elif interval == "Q":
-        # I want it to show quarter (i.e. 2024-Q1)
-        return_series.index = return_series.index.to_period("Q").strftime("%Y-Q%q")
+        return_series.index = return_series.index.to_period(
+            "Q").strftime("%Y-Q%q")
+        return_series['merge_use_Y-M'] = return_series.index
+
+        interest_rate['merge_use_Y-M'] = interest_rate.index.to_period(
+            "Q").strftime("%Y-Q%q")
+
     else:
-        return_series.index = return_series.index.strftime("%Y-%m")
+        return_series.index = return_series.index.to_period(
+            "M").strftime("%Y-%m")
+        return_series['merge_use_Y-M'] = return_series.index
+
+        interest_rate['merge_use_Y-M'] = interest_rate.index.to_period(
+            "M").strftime("%Y-%m")
+
+    return_series = return_series.merge(
+        interest_rate, on='merge_use_Y-M', how="left").set_index(return_series.index)
+
+    return_series.drop(columns='merge_use_Y-M', inplace=True)
+
+    return_series[f"{interval}_Return - rf (%)"] = return_series[f"{interval}_Return (%)"] - \
+        return_series['rf']
 
     return return_series
 
 
+def get_gics_industry_weighted_mean(
+    return_df_dict: dict,
+    TICKER: str,
+    my_portfolio_tickers: list,
+    same_gics_industry_weight_dict: dict,
+    index_tickers: list,
+    mode: str,
+    comparable_tickers: list,
+    **kwargs,
+) -> pd.DataFrame:
+
+    # Create dictionaries to store the weighted means for each component
+    GICS_Industry_Weighted_Mean = {
+        f"{mode}_Return - rf (%)": dd(float),
+        f"{mode}_Return (%)": dd(float),
+        "rf": dd(float),
+    }
+
+    # Iterate through each date in the TICKER's return data (assumed main timeframe)
+    for date in return_df_dict[TICKER].index:
+        # Calculate the sum of weights excluding tickers with NaN for this date
+        total_weight = 0
+        adjusted_weight_dict = {}
+
+        for ticker in my_portfolio_tickers:
+            # Skip the index tickers and the main TICKER
+            if ticker not in index_tickers + [TICKER]:
+                # Check if the date exists in the ticker's DataFrame before accessing
+                if date in return_df_dict[ticker].index:
+                    # Check if the return value for this date is not NaN
+                    if not pd.isna(return_df_dict[ticker].loc[date, f'{mode}_Return - rf (%)']):
+                        # Sum the valid weights
+                        total_weight += same_gics_industry_weight_dict[ticker]
+                        adjusted_weight_dict[ticker] = same_gics_industry_weight_dict[ticker]
+
+        # If total weight is not zero, normalize weights to sum to 100
+        if total_weight > 0:
+            for ticker in adjusted_weight_dict.keys():
+                adjusted_weight_dict[ticker] /= total_weight
+
+        # Calculate the weighted values for each required column
+        for ticker, weight in adjusted_weight_dict.items():
+            GICS_Industry_Weighted_Mean[f"{mode}_Return - rf (%)"][date] += (
+                weight * return_df_dict[ticker].loc[date,
+                                                    f'{mode}_Return - rf (%)']
+            )
+            GICS_Industry_Weighted_Mean[f"{mode}_Return (%)"][date] += (
+                weight * return_df_dict[ticker].loc[date, f'{mode}_Return (%)']
+            )
+            GICS_Industry_Weighted_Mean["rf"][date] += (
+                weight * return_df_dict[ticker].loc[date, 'rf']
+            )
+
+    # Create a DataFrame to store the results for each column
+    weighted_mean_df = pd.DataFrame({f'{mode}_Return (%)': GICS_Industry_Weighted_Mean[f'{mode}_Return (%)'],
+                                     f'{mode}_Return - rf (%)': GICS_Industry_Weighted_Mean[f'{mode}_Return - rf (%)'],
+                                     'rf': GICS_Industry_Weighted_Mean['rf']})
+
+    # Ensure every date from the TICKER's df is in the weighted mean df, adding NaN if not
+    for date in return_df_dict[TICKER].index:
+        if date not in weighted_mean_df.index:
+            weighted_mean_df.loc[date] = np.nan
+
+    # Sort index to ensure dates are in chronological order
+    weighted_mean_df = weighted_mean_df.sort_index()
+
+    # Assign the result back to the return_df_dict with appropriate key
+    key = "GICS I.WMean" if "industry" in comparable_tickers["type"] else "GICS S.WMean"
+    return_df_dict[key] = weighted_mean_df
+
+    return return_df_dict
+
+
 def get_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str):
+
+    SHARPE_MULTIPLIER = 12
 
     period_of_interest_return_df = returns_df_dict[ticker].loc[start_period:end_year]
 
     stats_dict = {}
 
     # mean, std, n
-    stats_dict["mean (%)"] = np.round(period_of_interest_return_df.mean().values[0], 2)
-    stats_dict["std (%)"] = np.round(period_of_interest_return_df.std().values[0], 2)
+    stats_dict["mean (%)"] = np.round(
+        period_of_interest_return_df['M_Return (%)'].mean(), 2)
+    stats_dict["std (%)"] = np.round(
+        period_of_interest_return_df['M_Return (%)'].std(), 2)
+
+    stats_dict['mean (-rf) (%)'] = np.round(
+        period_of_interest_return_df['M_Return - rf (%)'].mean(), 2)
 
     # sharpe
-    mode = returns_df_dict[ticker].columns[0].split("_")[0]
     stats_dict["n"] = period_of_interest_return_df[
-        ~period_of_interest_return_df[f"{mode}_Return (%)"].isna()
+        ~period_of_interest_return_df[f"M_Return (%)"].isna()
     ].shape[0]
-    sharpe_multiplier = 4 if mode == "Q" else 12 if mode == "M" else 1
     stats_dict["sharpe"] = np.round(
-        np.sqrt(sharpe_multiplier) * stats_dict["mean (%)"] / stats_dict["std (%)"], 2
+        np.sqrt(SHARPE_MULTIPLIER) *
+        stats_dict["mean (-rf) (%)"] / stats_dict["std (%)"], 2
     )
 
     # earliest and latest date for ticker
@@ -110,12 +214,12 @@ def get_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: st
 
     # beta over this period
     X = returns_df_dict["^AORD"].loc[regression_start_period:regression_end_period][
-        f"{mode}_Return (%)"
+        f"M_Return - rf (%)"
     ]
     y = returns_df_dict[ticker].loc[regression_start_period:regression_end_period][
-        f"{mode}_Return (%)"
+        f"M_Return - rf (%)"
     ]
-    y.rename(f"{ticker}_{mode}_Return (%)", inplace=True)
+    y.rename(f"{ticker}_M_Return - rf (%)", inplace=True)
     X_y = pd.concat([X, y], axis=1)
 
     X_y.dropna(inplace=True)
@@ -125,7 +229,7 @@ def get_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: st
     X = sm.add_constant(X)
 
     linreg = sm.OLS(y, X).fit()
-    stats_dict["CAPM beta"] = np.round(linreg.params[f"{mode}_Return (%)"], 2)
+    stats_dict["CAPM beta"] = np.round(linreg.params[f"M_Return - rf (%)"], 2)
     stats_dict["CAPM alpha"] = np.round(linreg.params["const"], 2)
 
     return stats_dict
@@ -144,8 +248,9 @@ def historical_corr(monthly_returns_df_dict: dict, start_period: str, end_year: 
     period_of_interest_return_df = pd.DataFrame()
 
     for ticker, returns_df in monthly_returns_df_dict.items():
-        returns_df = returns_df.loc[start_period:end_year]
-        returns_df.rename(columns={returns_df.columns[0]: ticker}, inplace=True)
+        returns_df = returns_df[['M_Return (%)']].loc[start_period:end_year]
+        returns_df.rename(
+            columns={returns_df.columns[0]: ticker}, inplace=True)
 
         period_of_interest_return_df = pd.merge(
             period_of_interest_return_df,
@@ -175,13 +280,13 @@ def plot_returns(
     # Create a figure and 3 subplots
     fig, axs = plt.subplots(3, 1, figsize=(8, 8))
 
-    interested_monthly_returns_df = monthly_returns_df_dict[ticker][
+    interested_monthly_returns_df = monthly_returns_df_dict[ticker][['M_Return (%)']][
         monthly_returns_df_dict[ticker].index > first_end_of_quarter
     ]
-    interested_quarterly_returns_df = quarterly_returns_df_dict[ticker][
+    interested_quarterly_returns_df = quarterly_returns_df_dict[ticker][['Q_Return (%)']][
         quarterly_returns_df_dict[ticker].index > first_end_of_quarter
     ]
-    interested_yearly_returns_df = yearly_returns_df_dict[ticker][
+    interested_yearly_returns_df = yearly_returns_df_dict[ticker][['Y_Return (%)']][
         yearly_returns_df_dict[ticker].index > first_end_of_quarter
     ]
 
@@ -268,7 +373,8 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     plt.figure(figsize=(10, 8))
     # Set vmin and vmax to -1 and 1, respectively, and use the custom colormap
     plt.matshow(correlation_df, fignum=1, vmin=-1, vmax=1, cmap="RdBu")
-    plt.xticks(range(len(correlation_df.columns)), correlation_df.columns, rotation=80)
+    plt.xticks(range(len(correlation_df.columns)),
+               correlation_df.columns, rotation=80)
     plt.yticks(range(len(correlation_df.columns)), correlation_df.columns)
     plt.colorbar()  # Colour bar with the custom colormap
     plt.title(f"{ticker} Monthly Return Correlation Matrix")
@@ -315,65 +421,6 @@ def get_historical_prices(
     return historical_prices
 
 
-def get_gics_industry_weighted_mean(
-    return_df_dict: dict,
-    TICKER: str,
-    my_portfolio_tickers: list,
-    same_gics_industry_weight_dict: dict,
-    index_tickers: list,
-    mode: str,
-    comparable_tickers: list,
-    **kwargs,
-) -> pd.DataFrame:
-    GICS_Industry_Weighted_Mean = dd(float)
-
-    # Iterate through each date in the TICKER's return data (assumed main timeframe)
-    for date in return_df_dict[TICKER].index:
-        # Calculate the sum of weights excluding tickers with NaN for this date
-        total_weight = 0
-        adjusted_weight_dict = {}
-
-        for ticker in my_portfolio_tickers:
-            # Skip the index tickers and the main TICKER
-            if ticker not in index_tickers + [TICKER]:
-                # Check if the date exists in the ticker's DataFrame before accessing
-                if date in return_df_dict[ticker].index:
-                    # Check if the return value for this date is not NaN
-                    if not pd.isna(return_df_dict[ticker].loc[date].values[0]):
-                        # Sum the valid weights
-                        total_weight += same_gics_industry_weight_dict[ticker]
-                        adjusted_weight_dict[ticker] = same_gics_industry_weight_dict[
-                            ticker
-                        ]
-
-        # If total weight is not zero, normalize weights to sum to 100
-        if total_weight > 0:
-            for ticker in adjusted_weight_dict.keys():
-                adjusted_weight_dict[ticker] /= total_weight
-
-        # Now calculate the weighted return for this date
-        for ticker, weight in adjusted_weight_dict.items():
-            GICS_Industry_Weighted_Mean[date] += (
-                weight * return_df_dict[ticker].loc[date].values[0]
-            )
-
-    # Create a DataFrame to store the results
-    weighted_mean_df = pd.DataFrame.from_dict(
-        GICS_Industry_Weighted_Mean, orient="index", columns=[f"{mode}_Return (%)"]
-    )
-
-    # Ensure every date from the TICKER's df is in the weighted mean df, adding NaN if not
-    for date in return_df_dict[TICKER].index:
-        if date not in weighted_mean_df.index:
-            weighted_mean_df.loc[date] = np.nan
-
-    return_df_dict[
-        "GICS I.WMean" if "industry" in comparable_tickers["type"] else "GICS S.WMean"
-    ] = weighted_mean_df.sort_index()
-
-    return return_df_dict
-
-
 def filter_returns(returns_df, start_date):
     """
     Helper function to filter returns DataFrame based on a start date.
@@ -414,13 +461,14 @@ def plot_returns_comparative(
 
     # Filter data for the selected range
     interested_monthly_returns_df = filter_returns(
-        monthly_returns_df_dict[TICKER], first_end_of_quarter
+        monthly_returns_df_dict[TICKER][['M_Return (%)']], first_end_of_quarter
     )
     interested_quarterly_returns_df = filter_returns(
-        quarterly_returns_df_dict[TICKER], first_end_of_quarter
+        quarterly_returns_df_dict[TICKER][[
+            'Q_Return (%)']], first_end_of_quarter
     )
     interested_yearly_returns_df = filter_returns(
-        yearly_returns_df_dict[TICKER], first_end_of_quarter
+        yearly_returns_df_dict[TICKER][['Y_Return (%)']], first_end_of_quarter
     )
 
     # Filter for the industry weighted mean and AORD
@@ -428,23 +476,28 @@ def plot_returns_comparative(
         "GICS I.WMean" if "industry" in comparable_tickers["type"] else "GICS S.WMean"
     )
     industry_monthly_returns = filter_returns(
-        monthly_returns_df_dict[industry_key], first_end_of_quarter
+        monthly_returns_df_dict[industry_key][[
+            'M_Return (%)']], first_end_of_quarter
     )
     industry_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict[industry_key], first_end_of_quarter
+        quarterly_returns_df_dict[industry_key][[
+            'Q_Return (%)']], first_end_of_quarter
     )
     industry_yearly_returns = filter_returns(
-        yearly_returns_df_dict[industry_key], first_end_of_quarter
+        yearly_returns_df_dict[industry_key][[
+            'Y_Return (%)']], first_end_of_quarter
     )
 
     aord_monthly_returns = filter_returns(
-        monthly_returns_df_dict["^AORD"], first_end_of_quarter
+        monthly_returns_df_dict["^AORD"][[
+            'M_Return (%)']], first_end_of_quarter
     )
     aord_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict["^AORD"], first_end_of_quarter
+        quarterly_returns_df_dict["^AORD"][[
+            'Q_Return (%)']], first_end_of_quarter
     )
     aord_yearly_returns = filter_returns(
-        yearly_returns_df_dict["^AORD"], first_end_of_quarter
+        yearly_returns_df_dict["^AORD"][['Y_Return (%)']], first_end_of_quarter
     )
 
     ### Reindexing to ensure proper date alignment ###
@@ -455,7 +508,8 @@ def plot_returns_comparative(
     interested_monthly_returns_df = interested_monthly_returns_df.reindex(
         common_monthly_index
     )
-    industry_monthly_returns = industry_monthly_returns.reindex(common_monthly_index)
+    industry_monthly_returns = industry_monthly_returns.reindex(
+        common_monthly_index)
     aord_monthly_returns = aord_monthly_returns.reindex(common_monthly_index)
 
     # Plot Monthly Returns
@@ -512,7 +566,8 @@ def plot_returns_comparative(
     industry_quarterly_returns = industry_quarterly_returns.reindex(
         common_quarterly_index
     )
-    aord_quarterly_returns = aord_quarterly_returns.reindex(common_quarterly_index)
+    aord_quarterly_returns = aord_quarterly_returns.reindex(
+        common_quarterly_index)
 
     x_labels_quarterly = common_quarterly_index
     x_quarterly = np.arange(len(x_labels_quarterly))
@@ -562,7 +617,8 @@ def plot_returns_comparative(
     interested_yearly_returns_df = interested_yearly_returns_df.reindex(
         common_yearly_index
     )
-    industry_yearly_returns = industry_yearly_returns.reindex(common_yearly_index)
+    industry_yearly_returns = industry_yearly_returns.reindex(
+        common_yearly_index)
     aord_yearly_returns = aord_yearly_returns.reindex(common_yearly_index)
 
     x_labels_yearly = common_yearly_index
