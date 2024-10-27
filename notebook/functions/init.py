@@ -9,6 +9,7 @@ from copy import deepcopy
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 from tqdm import tqdm
+import copy
 
 import yfinance as yf
 

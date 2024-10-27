@@ -104,7 +104,7 @@ def get_return(price_df: pd.DataFrame, interest_rate: pd.DataFrame, interval: st
     return_series.drop(columns='merge_use_Y-M', inplace=True)
 
     return_series[f"{interval}_Return - rf (%)"] = return_series[f"{interval}_Return (%)"] - \
-        return_series['rf']
+        return_series['rf (%)']
 
     return return_series
 
@@ -124,7 +124,7 @@ def get_gics_industry_weighted_mean(
     GICS_Industry_Weighted_Mean = {
         f"{mode}_Return - rf (%)": dd(float),
         f"{mode}_Return (%)": dd(float),
-        "rf": dd(float),
+        "rf (%)": dd(float),
     }
 
     # Iterate through each date in the TICKER's return data (assumed main timeframe)
@@ -158,14 +158,14 @@ def get_gics_industry_weighted_mean(
             GICS_Industry_Weighted_Mean[f"{mode}_Return (%)"][date] += (
                 weight * return_df_dict[ticker].loc[date, f'{mode}_Return (%)']
             )
-            GICS_Industry_Weighted_Mean["rf"][date] += (
-                weight * return_df_dict[ticker].loc[date, 'rf']
+            GICS_Industry_Weighted_Mean['rf (%)'][date] += (
+                weight * return_df_dict[ticker].loc[date, 'rf (%)']
             )
 
     # Create a DataFrame to store the results for each column
     weighted_mean_df = pd.DataFrame({f'{mode}_Return (%)': GICS_Industry_Weighted_Mean[f'{mode}_Return (%)'],
                                      f'{mode}_Return - rf (%)': GICS_Industry_Weighted_Mean[f'{mode}_Return - rf (%)'],
-                                     'rf': GICS_Industry_Weighted_Mean['rf']})
+                                     'rf (%)': GICS_Industry_Weighted_Mean['rf (%)']})
 
     # Ensure every date from the TICKER's df is in the weighted mean df, adding NaN if not
     for date in return_df_dict[TICKER].index:
@@ -198,6 +198,8 @@ def get_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: st
 
     stats_dict['mean (-rf) (%)'] = np.round(
         period_of_interest_return_df['M_Return - rf (%)'].mean(), 2)
+    stats_dict['std (-rf) (%)'] = np.round(
+        period_of_interest_return_df['M_Return - rf (%)'].std(), 2)
 
     # sharpe
     stats_dict["n"] = period_of_interest_return_df[
@@ -205,10 +207,13 @@ def get_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: st
     ].shape[0]
     stats_dict["sharpe"] = np.round(
         np.sqrt(SHARPE_MULTIPLIER) *
-        stats_dict["mean (-rf) (%)"] / stats_dict["std (%)"], 2
+        stats_dict["mean (-rf) (%)"] / stats_dict["std (-rf) (%)"], 2
     )
 
     # earliest and latest date for ticker
+    if stats_dict["n"] == 0:
+        return stats_dict
+
     regression_start_period = returns_df_dict[ticker].index[1]
     regression_end_period = returns_df_dict[ticker].index[-1]
 
