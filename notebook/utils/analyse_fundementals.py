@@ -1,4 +1,4 @@
-from functions.init import *
+from utils.init import *
 
 
 def get_balance_sheet_df(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
@@ -207,10 +207,14 @@ def get_key_statistics(stock_fundementals: pd.DataFrame, ticker: str) -> pd.Data
 
     stock_fundementals["DPS"] = stock_fundementals["Dividends"]
 
-    stock_fundementals["D/E"] = (
-        stock_fundementals["Total Debt"] /
-        stock_fundementals["Stockholders Equity"].replace(0, np.nan)
-    )
+    try:
+        stock_fundementals["D/E"] = (
+            stock_fundementals["Total Debt"] /
+            stock_fundementals["Stockholders Equity"].replace(0, np.nan)
+        )
+    except KeyError as e:
+        stock_fundementals["D/E"] = np.nan
+        print(f"Missing data for D/E for ticker {ticker}: {e}")
 
     stock_fundementals["Current Ratio"] = (
         stock_fundementals["Current Assets"] /
