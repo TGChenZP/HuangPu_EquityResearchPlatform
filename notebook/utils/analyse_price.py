@@ -1146,3 +1146,15 @@ def plot_gics_mcap_weights(TICKER: str, same_industry_tickers_mcap_df: pd.DataFr
         plt.show()
     except KeyError:
         plt.close()
+
+
+def get_monthly_stats_for_all_tickers(monthly_returns_df_dict: dict, comparable_ASX_tickers_dict: dict, index_tickers_list: list, same_industry_tickers_mcap_df: pd.DataFrame, TICKER: str, first_end_of_quarter: str, last_end_of_quarter: str, COUNTRY: str) -> pd.DataFrame:
+    """ Get the monthly returns for the interested ticker """
+    stats_dict = {}
+    for ticker in monthly_returns_df_dict:
+        stats_dict[ticker] = get_monthly_stats(
+            monthly_returns_df_dict, ticker, first_end_of_quarter, last_end_of_quarter, COUNTRY)
+    stats_df = pd.DataFrame(stats_dict).T
+    stats_df = get_stats_df(TICKER, stats_df, comparable_ASX_tickers_dict,
+                            index_tickers_list, same_industry_tickers_mcap_df)
+    return stats_df

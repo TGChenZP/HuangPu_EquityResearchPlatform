@@ -362,6 +362,7 @@ def get_fundementals_dfs(first_end_of_quarter, historical_prices, TICKER, COUNTR
 
 
 def process_stock_fundementals(stock_fundementals: pd.DataFrame, object: str, first_end_of_quarter: pd.Timestamp, historical_prices: dict, TICKER: str) -> pd.DataFrame:
+    """ Change Index, and get other features """
     stock_fundementals = stock_fundementals.sort_index()
     # change index to datetime (date)
     stock_fundementals.index = pd.to_datetime(stock_fundementals.index).date
@@ -642,3 +643,96 @@ def plot_key_fundamentals_multipliers(interested_ticker_key_interested_fundament
         plt.savefig(
             f'../outputs/{TICKER}_{safe_column_name}_comparison.png', bbox_inches='tight', dpi=300)
         plt.show()
+
+
+def get_raw_fundementals_stats(comparable_ASX_tickers_dict: dict, first_end_of_quarter: str, historical_prices_dict: dict, COUNTRY: str):
+    """ Get raw fundementals stats for all tickers in comparable_ASX_tickers_dict """
+
+    raw_fundementals_stats_dict = dict()
+    object_dict = dict()
+
+    for ticker in comparable_ASX_tickers_dict['list']:
+        ticker = ticker.split('.')[0]
+        print('\n', ticker)
+        raw_stats, key_interested_stats, key_interested_stats_pct_change, object = get_fundementals_dfs(
+            first_end_of_quarter, historical_prices_dict, ticker, COUNTRY)
+
+        raw_fundementals_stats_dict[ticker] = raw_stats
+        object_dict[ticker] = object
+
+    return raw_fundementals_stats_dict, object_dict
+
+
+def interpolate_fundementals(raw_fundementals_stats_dict: dict):
+    """ Interpolate fundementals stats for all tickers in raw_fundementals_stats_dict to half yearly blocks """
+
+    interpolated_fundementals_stats_dict = {}
+    for key in raw_fundementals_stats_dict.keys():
+        interpolated_fundementals_stats = interpolate_fundementals_stats(
+            raw_fundementals_stats_dict, key)
+        interpolated_fundementals_stats_dict[key] = interpolated_fundementals_stats
+
+    return interpolated_fundementals_stats_dict
+
+
+def get_interested_fundementals_dates(interested_ticker_key_interested_fundementals_stats_pct_change: pd.DataFrame):
+    """ Get the dates that the ticker of interest has fundementals for, to agg the interpolated fundementals stats """
+
+    interested_dates = [pd.to_datetime(
+        dt.strftime('%Y-%m')) for dt in interested_ticker_key_interested_fundementals_stats_pct_change.index]
+
+    return interested_dates
+
+
+def agg_interpolated_fundementals_stats_for_comparable_tickers(interpolated_fundementals_stats_dict: dict, interested_dates: list):
+    """ Aggregate interpolated fundementals stats for all tickers in interpolated_fundementals_stats_dict """
+
+    agg_interpolated_fundementals_stats_df_dict = {}
+    for key in interpolated_fundementals_stats_dict:
+        agg_interpolated_fundementals_stats_df = agg_interpolated_fundementals_stats(
+            interpolated_fundementals_stats_dict[key], interested_dates)
+        agg_interpolated_fundementals_stats_df_dict[key] = agg_interpolated_fundementals_stats_df
+
+    return agg_interpolated_fundementals_stats_df_dict
+
+
+def get_agg_interpolated_fundementals_stats(raw_fundementals_stats_dict: dict, interested_ticker_key_interested_fundementals_stats_pct_change: pd.DataFrame):
+    """ Aggregate interpolated fundementals stats for all tickers in interpolated_fundementals_stats_dict """
+
+    interpolated_fundementals_stats_dict = interpolate_fundementals(
+        raw_fundementals_stats_dict)
+
+    interested_dates = get_interested_fundementals_dates(
+        interested_ticker_key_interested_fundementals_stats_pct_change)
+
+    agg_interpolated_fundementals_stats_df_dict = agg_interpolated_fundementals_stats_for_comparable_tickers(
+        interpolated_fundementals_stats_dict, interested_dates)
+
+    return agg_interpolated_fundementals_stats_df_dict
+
+
+def get_key_interested_fundementals_stats_for_comparable(agg_interpolated_fundementals_stats_df_dict: pd.DataFrame, object_dict: dict, first_end_of_quarter: str, historical_prices_dict: dict):
+    """ Get key interested fundementals stats from the stock_fundementals """
+
+    key_interested_fundementals_stats_dict = {}
+    key_interested_fundementals_stats_pct_change_dict = {}
+
+    for key in agg_interpolated_fundementals_stats_df_dict:
+
+        # change index and get other features
+        stock_fundementals = process_stock_fundementals(
+            agg_interpolated_fundementals_stats_df_dict[key], object_dict[key], first_end_of_quarter, historical_prices_dict, key)
+
+        # get key interested stats
+        key_interested_stats = get_key_interested_fundementals_stats(
+            stock_fundementals)
+
+        # get key interested stats pct change
+        key_interested_stats_pct_change = get_key_interested_fundementals_stat_pct_change(
+            key_interested_stats
+        )
+
+        key_interested_fundementals_stats_dict[key] = key_interested_stats
+        key_interested_fundementals_stats_pct_change_dict[key] = key_interested_stats_pct_change
+
+    return key_interested_fundementals_stats_dict, key_interested_fundementals_stats_pct_change_dict
