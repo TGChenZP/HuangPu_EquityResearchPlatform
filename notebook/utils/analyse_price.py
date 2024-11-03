@@ -186,8 +186,9 @@ def get_gics_industry_weighted_mean(
     return return_df_dict
 
 
-def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str):
+def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str, country: str):
     """ Get the mean, std, sharpe, beta, alpha of the stock """
+    assert country in ['AU', 'US'], "Country must be AU or US"
 
     SHARPE_MONTHLY_MULTIPLIER = 12
 
@@ -228,7 +229,7 @@ def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_
         regression_end_period = returns_df_dict[ticker].index[-1]
 
         # fit regression to get beta and alpha
-        X = returns_df_dict["^AORD"].loc[regression_start_period:regression_end_period][
+        X = returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None].loc[regression_start_period:regression_end_period][
             f"M_Return - rf (%)"
         ]
         y = returns_df_dict[ticker].loc[regression_start_period:regression_end_period][
@@ -404,16 +405,17 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     plt.show()
 
 
-def fetch_ticker_price(ticker: str, index_tickers: list):
+def fetch_ticker_price(ticker: str, index_tickers: list, country: str) -> tuple:
     """
     Helper function to fetch the price data for a given ticker.
     """
-    ticker_with_suffix = f"{ticker}.AX" if ticker not in index_tickers else ticker
+    ticker_with_suffix = f"{ticker}.AX" if (ticker not in index_tickers and country == 'AU') else ticker if (
+        ticker not in index_tickers and country == 'US') else ticker
     return ticker, get_prices(ticker_with_suffix, "2019-06-01")
 
 
 def get_historical_prices(
-    my_portfolio_tickers_list: list, index_tickers: str, historical_prices_dict: list = None
+    my_portfolio_tickers_list: list, index_tickers: str, country: str,  historical_prices_dict: list = None,
 ) -> dict:
     """
     Fetch historical prices for all tickers in the portfolio concurrently.
@@ -432,7 +434,8 @@ def get_historical_prices(
         # Use starmap to fetch prices concurrently
         results = pool.starmap(
             fetch_ticker_price,
-            [(ticker, index_tickers) for ticker in my_portfolio_tickers_list],
+            [(ticker, index_tickers, country)
+             for ticker in my_portfolio_tickers_list],
         )
 
     # Combine results into a dictionary
@@ -468,8 +471,11 @@ def plot_returns_comparative(
     first_end_of_quarter: str,
     last_end_of_quarter: str,
     comparable_tickers: dict,
+    country: str,
     **kwargs,
 ):
+    assert country in ['AU', 'US'], "Country must be AU or US"
+
     # Define a consistent color scheme for all returns
     ticker_color = "red"
     industry_color = "blue"
@@ -493,33 +499,35 @@ def plot_returns_comparative(
         yearly_returns_df_dict[TICKER][['Y_Return (%)']], first_end_of_quarter
     )
 
-    # Filter for the industry weighted mean and AORD
-    industry_key = (
-        "GICS I.WMean" if "industry" in comparable_tickers["type"] else "GICS S.WMean"
-    )
-    industry_monthly_returns = filter_returns(
-        monthly_returns_df_dict[industry_key][[
-            'M_Return (%)']], first_end_of_quarter
-    )
-    industry_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict[industry_key][[
-            'Q_Return (%)']], first_end_of_quarter
-    )
-    industry_yearly_returns = filter_returns(
-        yearly_returns_df_dict[industry_key][[
-            'Y_Return (%)']], first_end_of_quarter
-    )
+    if comparable_tickers is not None:
+        # Filter for the industry weighted mean and AORD
+        industry_key = (
+            "GICS I.WMean" if "industry" in comparable_tickers["type"] else "GICS S.WMean"
+        )
+        industry_monthly_returns = filter_returns(
+            monthly_returns_df_dict[industry_key][[
+                'M_Return (%)']], first_end_of_quarter
+        )
+        industry_quarterly_returns = filter_returns(
+            quarterly_returns_df_dict[industry_key][[
+                'Q_Return (%)']], first_end_of_quarter
+        )
+        industry_yearly_returns = filter_returns(
+            yearly_returns_df_dict[industry_key][[
+                'Y_Return (%)']], first_end_of_quarter
+        )
 
     aord_monthly_returns = filter_returns(
-        monthly_returns_df_dict["^AORD"][[
+        monthly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
             'M_Return (%)']], first_end_of_quarter
     )
     aord_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict["^AORD"][[
+        quarterly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
             'Q_Return (%)']], first_end_of_quarter
     )
     aord_yearly_returns = filter_returns(
-        yearly_returns_df_dict["^AORD"][['Y_Return (%)']], first_end_of_quarter
+        yearly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
+            'Y_Return (%)']], first_end_of_quarter
     )
 
     ### Reindexing to ensure proper date alignment ###
@@ -550,15 +558,16 @@ def plot_returns_comparative(
         ticker_color,
         x_labels_monthly,
     )
-    plot_bar_returns(
-        axs[0],
-        x_monthly,
-        industry_monthly_returns,
-        bar_width,
-        "GICS Industry Weighted Mean (%)",
-        industry_color,
-        x_labels_monthly,
-    )
+    if not np.isnan(industry_monthly_returns).all().all():
+        plot_bar_returns(
+            axs[0],
+            x_monthly,
+            industry_monthly_returns,
+            bar_width,
+            "GICS Industry Weighted Mean (%)",
+            industry_color,
+            x_labels_monthly,
+        )
     plot_bar_returns(
         axs[0],
         x_monthly + bar_width,
@@ -606,15 +615,16 @@ def plot_returns_comparative(
         ticker_color,
         x_labels_quarterly,
     )
-    plot_bar_returns(
-        axs[1],
-        x_quarterly,
-        industry_quarterly_returns,
-        bar_width,
-        "GICS Industry Weighted Mean (%)",
-        industry_color,
-        x_labels_quarterly,
-    )
+    if not np.isnan(industry_quarterly_returns).all().all():
+        plot_bar_returns(
+            axs[1],
+            x_quarterly,
+            industry_quarterly_returns,
+            bar_width,
+            "GICS Industry Weighted Mean (%)",
+            industry_color,
+            x_labels_quarterly,
+        )
     plot_bar_returns(
         axs[1],
         x_quarterly + bar_width,
@@ -658,15 +668,16 @@ def plot_returns_comparative(
         ticker_color,
         x_labels_yearly,
     )
-    plot_bar_returns(
-        axs[2],
-        x_yearly,
-        industry_yearly_returns,
-        bar_width,
-        "GICS Industry Weighted Mean (%)",
-        industry_color,
-        x_labels_yearly,
-    )
+    if not np.isnan(industry_yearly_returns).all().all():
+        plot_bar_returns(
+            axs[2],
+            x_yearly,
+            industry_yearly_returns,
+            bar_width,
+            "GICS Industry Weighted Mean (%)",
+            industry_color,
+            x_labels_yearly,
+        )
     plot_bar_returns(
         axs[2],
         x_yearly + bar_width,
@@ -701,6 +712,8 @@ def plot_returns_comparative(
 
     plt.savefig(f"../outputs/{TICKER}_comparative_returns.png")
 
+    plt.plot()
+
 
 def plot_bar_returns(ax, x, data, bar_width, label, color, x_labels):
     """
@@ -722,6 +735,9 @@ def plot_close_price_with_dollar_lines(TICKER: str, historical_prices: dict):
     - historical_prices (dict): A dictionary where the key is the ticker symbol, and the value is a DataFrame containing the stock price data with a 'Close' column.
     """
 
+    # Create a new figure
+    plt.figure(figsize=(12, 6))
+
     # Set the plot title
     plt.title(f"{TICKER} Close Price")
 
@@ -729,10 +745,31 @@ def plot_close_price_with_dollar_lines(TICKER: str, historical_prices: dict):
     plt.plot(historical_prices[TICKER]["Close"], label=f"{TICKER} Close Price")
 
     # Plot horizontal lines at each dollar interval
-    min_price = int(np.floor(historical_prices[TICKER]["Close"].min())) - 1
-    max_price = int(np.ceil(historical_prices[TICKER]["Close"].max())) + 1
 
-    for i in range(min_price, max_price):
+    min_price = historical_prices[TICKER]["Close"].min()
+    max_price = historical_prices[TICKER]["Close"].max()
+    diff = max_price - min_price
+
+    # Set range based on price difference
+    if diff < 1:
+        range_value = 0.1
+    elif diff < 10:
+        range_value = 1
+    elif diff < 100:
+        range_value = 10
+    elif diff < 1000:
+        range_value = 100
+    elif diff < 10000:
+        range_value = 1000
+    else:
+        range_value = 10000
+
+    # Round min and max prices to the nearest multiple of range_value
+    min_price = (np.floor(min_price / range_value) * range_value)
+    max_price = (np.ceil(max_price / range_value) * range_value) + range_value
+
+    # Plot horizontal lines at each interval
+    for i in np.arange(min_price, max_price, range_value):
         plt.axhline(y=i, color="gray", linestyle=":", linewidth=0.5)
 
     plt.savefig(f"../outputs/{TICKER}_close_price.png")
@@ -745,9 +782,11 @@ def get_same_industry_tickers_mcap(same_industry_ASX_tickers_mcap_df: pd.DataFra
     """ Get the market cap of the same industry tickers
     NOTE: AU ONLY
     """
-
-    same_industry_tickers_mcap_df = same_industry_ASX_tickers_mcap_df.sort_values(
-        by='Market Cap', ascending=False)
+    try:
+        same_industry_tickers_mcap_df = same_industry_ASX_tickers_mcap_df.sort_values(
+            by='Market Cap', ascending=False)
+    except KeyError:  # catch empty DataFrame error (no comparable tickers)
+        same_industry_tickers_mcap_df = same_industry_ASX_tickers_mcap_df
 
     return same_industry_tickers_mcap_df
 
@@ -771,8 +810,11 @@ def get_AU_ticker_proportion_of_market(ticker_mv_df: pd.DataFrame, same_industry
     """ Get the proportion of the market cap of the ticker of interest to the market cap of the same industry
     NOTE: AU ONLY
     """
-    ticker_proportion_of_market = ticker_mv_df['Market Cap ($bn)'].values[0] / \
-        same_industry_tickers_mcap_df['Market Cap'].sum()
+    try:
+        ticker_proportion_of_market = ticker_mv_df['Market Cap ($bn)'].values[0] / \
+            (same_industry_tickers_mcap_df['Market Cap'].sum() / 1e9)
+    except IndexError:
+        ticker_proportion_of_market = np.nan
 
     return ticker_proportion_of_market
 
@@ -782,13 +824,16 @@ def get_same_AU_gics_industry_weight_dict(same_industry_tickers_mcap_df: pd.Data
     NOTE: AU ONLY
     """
 
-    same_gics_industry_weight_dict = same_industry_tickers_mcap_df.set_index('ASX code')[
-        'weight'].to_dict()
+    try:
+        same_gics_industry_weight_dict = same_industry_tickers_mcap_df.set_index('ASX code')[
+            'weight'].to_dict()
+    except KeyError:
+        same_gics_industry_weight_dict = {}
 
     return same_gics_industry_weight_dict
 
 
-def get_analysis_needed_ticker_list(interested_ticker: str, comparable_ASX_tickers_dict: dict, index_tickers_list: list) -> list:
+def get_analysis_needed_ticker_list(interested_ticker: str, index_tickers_list: list, comparable_ASX_tickers_dict: dict = None) -> list:
     """ Get the list of tickers needed for analysis """
     analysis_needed_ticker_list = [interested_ticker]
     analysis_needed_ticker_list.extend([ticker.split('.')[
@@ -798,11 +843,11 @@ def get_analysis_needed_ticker_list(interested_ticker: str, comparable_ASX_ticke
     return analysis_needed_ticker_list
 
 
-def get_historical_prices_for_interested_list(my_portfolio_tickers_list: list, index_tickers_list: list, historical_prices_dict: dict):
+def get_historical_prices_for_interested_list(my_portfolio_tickers_list: list, index_tickers_list: list, historical_prices_dict: dict, country: str) -> dict:
     """ Get the historical prices for the interested list of tickers """
 
     historical_prices_dict = get_historical_prices(
-        my_portfolio_tickers_list, index_tickers_list, historical_prices_dict)
+        my_portfolio_tickers_list, index_tickers_list, country, historical_prices_dict)
 
     return historical_prices_dict
 
@@ -824,9 +869,6 @@ def get_same_gics_stats_df(interested_ticker: str, stats_df: pd.DataFrame, compa
 def get_stats_df(interested_ticker: str, stats_df: dict, comparable_ASX_tickers_dict: dict, index_tickers_list: list, same_industry_tickers_mcap_df: pd.DataFrame) -> pd.DataFrame:
     """ Get the stats for the tickers in the same GICS industry"""
 
-    same_gics_stats_df = get_same_gics_stats_df(interested_ticker,
-                                                stats_df, comparable_ASX_tickers_dict, index_tickers_list, same_industry_tickers_mcap_df)
-
     def get_weighted_mean_row(same_gics_stats_df: pd.DataFrame) -> pd.DataFrame:
         weighted_mean_dict = {}
         for col in same_gics_stats_df.columns:
@@ -840,16 +882,27 @@ def get_stats_df(interested_ticker: str, stats_df: dict, comparable_ASX_tickers_
 
         return weighted_mean_df
 
-    weighted_mean_df = get_weighted_mean_row(same_gics_stats_df)
+    try:
+        same_gics_stats_df = get_same_gics_stats_df(interested_ticker,
+                                                    stats_df, comparable_ASX_tickers_dict, index_tickers_list, same_industry_tickers_mcap_df)
+        weighted_mean_df = get_weighted_mean_row(same_gics_stats_df)
+        weighted_mean_df = weighted_mean_df.drop(columns=['Market Cap ($bn)'])
+    except KeyError:
+        weighted_mean_df = pd.DataFrame()
+    except TypeError:
+        weighted_mean_df = pd.DataFrame()
 
     stats_df = pd.concat(
-        [stats_df, weighted_mean_df.drop(columns=['Market Cap ($bn)'])])
+        [stats_df, weighted_mean_df])
 
     return stats_df
 
 
-def get_historical_dividends(TICKER: str, historical_prices_dict: dict):
+def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country: str):
     """ Get historical dividends for a given ticker """
+
+    assert country in ['AU', 'US'], "Country must be AU or US"
+
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_dividends = historical_prices_dict[TICKER]
 
@@ -861,7 +914,7 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict):
 
     # Convert the 'Date' column to AEST
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney')
+        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
 
     # Now make it timezone unaware but still a timestamp
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
@@ -874,52 +927,9 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict):
     return historical_dividends
 
 
-def plot_dividends_over_time(TICKER: str, historical_prices_dict: dict):
-    """ Plot dividends over time for a given ticker """
-    # Assuming historical_dividends is your DataFrame for a specific TICKER
-    # Convert the date to AEST
-    historical_dividends = historical_prices_dict[TICKER]
-    # Reset index to move 'Date' from index to a column
-    historical_dividends = historical_dividends.reset_index()
-    historical_dividends['Date'] = pd.to_datetime(historical_dividends['Date'])
-    historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney')
-    historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
-        None)
+def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_prices_dict: dict, country: str):
 
-    # Filter the data to include only the rows where Dividends are greater than 0
-    dividends_df = historical_dividends[historical_dividends['Dividends'] > 0][[
-        'Date', 'Dividends']]
-
-    # Plot the data
-    # Create a plot with a defined size
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot Date vs Dividends
-    ax.plot(dividends_df['Date'], dividends_df['Dividends'],
-            marker='o', linestyle='-', color='b')
-
-    # Set the title and labels
-    ax.set_title(f'{TICKER} Dividends Over Time',
-                 fontsize=14, fontweight='bold')
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Dividends', fontsize=12)
-
-    # Rotate x-axis labels for better readability
-    plt.xticks(rotation=45)
-
-    # Add grid for better readability
-    ax.grid(True)
-
-    # Save the plot as an image if needed
-    plt.savefig(f'../outputs/{TICKER}_dividends_over_time.png',
-                bbox_inches='tight', dpi=300)
-
-    # Optionally display the plot
-    plt.show()
-
-
-def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_prices_dict: dict):
+    assert country in ['AU', 'US'], "Country must be AU or US"
 
     # Assuming historical_dividends is your DataFrame for a specific TICKER
     # Convert the date to AEST
@@ -929,7 +939,7 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
     historical_dividends = historical_dividends.reset_index()
     historical_dividends['Date'] = pd.to_datetime(historical_dividends['Date'])
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney')
+        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
         None)
 
@@ -988,8 +998,10 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
     plt.show()
 
 
-def get_historical_splits(TICKER: str, historical_prices_dict: dict):
+def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: str):
     """ Get historical splits for a given ticker """
+
+    assert country in ['AU', 'US'], "Country must be AU or US"
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_splits = historical_prices_dict[TICKER]
 
@@ -1001,7 +1013,7 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict):
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney')
+        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
 
     # Now make it timezone unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(
@@ -1014,8 +1026,9 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict):
     return historical_splits
 
 
-def plot_splits_over_time(TICKER: str, historical_prices_dict: dict):
+def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, country: str):
     """ Plot stock splits over time for a given ticker """
+    assert country in ['AU', 'US'], "Country must be AU or US"
     # Assuming historical_splits is your DataFrame for a specific TICKER
     # Convert the date to AEST
     historical_splits = historical_prices_dict[TICKER]
@@ -1028,7 +1041,7 @@ def plot_splits_over_time(TICKER: str, historical_prices_dict: dict):
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney')
+        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
 
     # Now make it timezone-unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(None)
@@ -1065,10 +1078,14 @@ def plot_splits_over_time(TICKER: str, historical_prices_dict: dict):
     plt.show()
 
 
-def plot_key_ticker_stats_table(stats_df: pd.DataFrame, TICKER: str, comparable_ASX_tickers_dict: dict):
+def plot_key_ticker_stats_table(stats_df: pd.DataFrame, TICKER: str, comparable_ASX_tickers_dict: dict, index_tickers_list: list):
     # Assuming key_ticker_stats is already created from your DataFrame
-    key_ticker_stats = stats_df.loc[[TICKER, '^AXJO',
-                                    '^AXKO', '^AXSO', '^AORD'] + ['GICS I.WMean' if 'industry' in comparable_ASX_tickers_dict['type'] else 'GICS S.WMean']]
+
+    if comparable_ASX_tickers_dict is None:
+        key_ticker_stats = stats_df.loc[[TICKER]+index_tickers_list]
+    else:
+        key_ticker_stats = stats_df.loc[[TICKER]+index_tickers_list + [
+            'GICS I.WMean' if 'industry' in comparable_ASX_tickers_dict['type'] else 'GICS S.WMean']]
 
     # Create the plot
     fig, ax = plt.subplots(figsize=(14, 2))  # Adjust figure size as needed
@@ -1099,31 +1116,33 @@ def plot_key_ticker_stats_table(stats_df: pd.DataFrame, TICKER: str, comparable_
 
 def plot_gics_mcap_weights(TICKER: str, same_industry_tickers_mcap_df: pd.DataFrame):
 
-    # Create the plot
-    fig, ax = plt.subplots(figsize=(6, 2))  # Adjust figure size as needed
-    ax.axis('tight')
-    ax.axis('off')
+    try:
+        # Create the plot
+        fig, ax = plt.subplots(figsize=(6, 2))  # Adjust figure size as needed
+        ax.axis('tight')
+        ax.axis('off')
 
-    same_industry_tickers_mcap_df['Market Cap'] = same_industry_tickers_mcap_df['Market Cap'].apply(
-        lambda x: round(x/1e9, 2))
-    same_industry_tickers_mcap_df.rename(
-        columns={'Market Cap': 'Market Cap ($bn)'}, inplace=True)
-    same_industry_tickers_mcap_df['weight'] = same_industry_tickers_mcap_df['weight'].apply(
-        lambda x: round(x, 2))
+        same_industry_tickers_mcap_df['Market Cap'] = same_industry_tickers_mcap_df['Market Cap'].apply(
+            lambda x: round(x/1e9, 2))
+        same_industry_tickers_mcap_df.rename(
+            columns={'Market Cap': 'Market Cap ($bn)'}, inplace=True)
+        same_industry_tickers_mcap_df['weight'] = same_industry_tickers_mcap_df['weight'].apply(
+            lambda x: round(x, 2))
+        # Create a table in the plot
+        table = ax.table(cellText=same_industry_tickers_mcap_df.values,
+                         colLabels=same_industry_tickers_mcap_df.columns,
+                         cellLoc='center', loc='center')
 
-    # Create a table in the plot
-    table = ax.table(cellText=same_industry_tickers_mcap_df.values,
-                     colLabels=same_industry_tickers_mcap_df.columns,
-                     cellLoc='center', loc='center')
+        # Bold the header row
+        for key, cell in table.get_celld().items():
+            if key[0] == 0:  # This selects the header row
+                cell.set_text_props(fontweight='bold')
 
-    # Bold the header row
-    for key, cell in table.get_celld().items():
-        if key[0] == 0:  # This selects the header row
-            cell.set_text_props(fontweight='bold')
+        # Save the plot as an image
+        plt.savefig(f'../outputs/{TICKER}_same_industry_tickers_mcap_table.png',
+                    bbox_inches='tight', dpi=300)
 
-    # Save the plot as an image
-    plt.savefig(f'../outputs/{TICKER}_same_industry_tickers_mcap_table.png',
-                bbox_inches='tight', dpi=300)
-
-    # Optionally display the plot
-    plt.show()
+        # Optionally display the plot
+        plt.show()
+    except KeyError:
+        plt.close()

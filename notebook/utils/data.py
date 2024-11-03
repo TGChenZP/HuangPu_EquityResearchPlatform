@@ -4,6 +4,16 @@ from utils.params import *
 from utils.params import *
 
 
+def get_index_tickers_list(country: str) -> list:
+
+    assert country in ['AU', 'US'], 'Country must be either AU or US'
+
+    if country == 'AU':
+        return au_index_tickers_list
+    elif country == 'US':
+        return us_index_tickers_list
+
+
 def get_interest_rate(country: str) -> dict:
     """ Get interest rate data for US and AU """
 
@@ -180,10 +190,14 @@ def get_ASX_ticker_gics(ticker_of_interest: str, asx_gics_df: pd.DataFrame) -> d
 
     ASX_ticker_gics_dict = {}
 
-    ASX_ticker_gics_dict['Sector'] = asx_gics_df[asx_gics_df['Ticker']
-                                                 == f'{ticker_of_interest}.AX']['Sector'].values[0]
-    ASX_ticker_gics_dict['Industry'] = asx_gics_df[asx_gics_df['Ticker']
-                                                   == f'{ticker_of_interest}.AX']['Industry'].values[0]
+    try:
+        ASX_ticker_gics_dict['Sector'] = asx_gics_df[asx_gics_df['Ticker']
+                                                     == f'{ticker_of_interest}.AX']['Sector'].values[0]
+        ASX_ticker_gics_dict['Industry'] = asx_gics_df[asx_gics_df['Ticker']
+                                                       == f'{ticker_of_interest}.AX']['Industry'].values[0]
+    except IndexError:
+        ASX_ticker_gics_dict['Sector'] = 'Unknown'
+        ASX_ticker_gics_dict['Industry'] = 'Unknown'
 
     return ASX_ticker_gics_dict
 
@@ -216,8 +230,11 @@ def get_same_gics_ASX_MCap_weights(interested_ticker: str, asx_companies_directo
     same_industry_ASX_tickers_mcap_df = same_industry_ASX_tickers_mcap_df[same_industry_ASX_tickers_mcap_df['Market Cap'].apply(
         lambda x: isinstance(x, float))]
 
-    # get weight
-    same_industry_ASX_tickers_mcap_df['weight'] = same_industry_ASX_tickers_mcap_df['Market Cap'] / \
-        same_industry_ASX_tickers_mcap_df['Market Cap'].sum()
+    try:
+        # get weight
+        same_industry_ASX_tickers_mcap_df['weight'] = same_industry_ASX_tickers_mcap_df['Market Cap'] / \
+            same_industry_ASX_tickers_mcap_df['Market Cap'].sum()
+    except KeyError:  # handle no comparable tickers
+        return pd.DataFrame()
 
     return same_industry_ASX_tickers_mcap_df

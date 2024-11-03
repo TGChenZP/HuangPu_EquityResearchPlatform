@@ -324,9 +324,12 @@ def get_other_features(
     return stock_fundementals
 
 
-def get_fundementals_dfs(first_end_of_quarter, historical_prices, TICKER):
+def get_fundementals_dfs(first_end_of_quarter, historical_prices, TICKER, COUNTRY):
 
-    object = yf.Ticker(f"{TICKER}.AX")
+    assert COUNTRY in ["AU", "US"], "COUNTRY must be either 'AU' or 'US'"
+
+    object = yf.Ticker(f"{TICKER}.AX" if COUNTRY ==
+                       "AU" else TICKER if COUNTRY == "US" else TICKER)
 
     # get balance sheet, concat, sort and change index to date
     balance_sheet_df = get_balance_sheet_df(object, TICKER)
