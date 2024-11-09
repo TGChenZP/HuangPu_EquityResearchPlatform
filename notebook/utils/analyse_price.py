@@ -1088,7 +1088,7 @@ def plot_key_ticker_stats_table(stats_df: pd.DataFrame, TICKER: str, comparable_
             'GICS I.WMean' if 'industry' in comparable_ASX_tickers_dict['type'] else 'GICS S.WMean']]
 
     # Create the plot
-    fig, ax = plt.subplots(figsize=(14, 2))  # Adjust figure size as needed
+    fig, ax = plt.subplots(figsize=(18, 4))  # Adjust figure size as needed
     ax.axis('tight')
     ax.axis('off')
 
@@ -1097,6 +1097,10 @@ def plot_key_ticker_stats_table(stats_df: pd.DataFrame, TICKER: str, comparable_
                      colLabels=key_ticker_stats.columns,
                      rowLabels=key_ticker_stats.index,
                      cellLoc='center', loc='center')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)  # Set the font size to a larger value
+    table.scale(1.2, 1.5)  # Adjust scaling to increase cell height and width
 
     # Bold the header row
     for key, cell in table.get_celld().items():
@@ -1132,6 +1136,11 @@ def plot_gics_mcap_weights(TICKER: str, same_industry_tickers_mcap_df: pd.DataFr
         table = ax.table(cellText=same_industry_tickers_mcap_df.values,
                          colLabels=same_industry_tickers_mcap_df.columns,
                          cellLoc='center', loc='center')
+
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)  # Set the font size to a larger value
+        # Adjust scaling to increase cell height and width
+        table.scale(1.2, 1.5)
 
         # Bold the header row
         for key, cell in table.get_celld().items():

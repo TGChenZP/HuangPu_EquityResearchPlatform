@@ -14,7 +14,7 @@ au_index_tickers_list = ['^AXJO', '^AXKO', '^AXSO', '^AORD']
 us_index_tickers_list = ['^GSPC', '^RUA', '^RUT', '^W5000']
 
 
-FUNDEMENTALS_RAW_COLUMNS = [
+FUNDAMENTALS_RAW_COLUMNS = [
     "Net Profit Margin",
     "Net Income Margin",
     "RoE",
@@ -42,7 +42,7 @@ BALANCE_SHEET_ROWS = [
     "Current Assets",  # total current assets
 ]
 
-FUNDEMENTAL_ROWS = [
+FUNDAMENTAL_ROWS = [
     "EBITDA",
     "EBIT",
     "Gross Profit",  # profit

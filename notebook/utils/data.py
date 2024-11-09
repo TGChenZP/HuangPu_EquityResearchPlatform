@@ -202,13 +202,26 @@ def get_ASX_ticker_gics(ticker_of_interest: str, asx_gics_df: pd.DataFrame) -> d
     return ASX_ticker_gics_dict
 
 
+# def get_comparable_ASX_tickers(ticker_of_interest: str, same_gics_ASX_tickers: dict):
+#     """ Get the comparable ASX tickers.
+#     NOTE: AU ONLY
+#     """
+#     comparable_ASX_tickers_dict = {'type': 'same_industry_500', 'list': same_gics_ASX_tickers['same_industry_500']} if \
+#         (len(same_gics_ASX_tickers['same_industry_500']) > 1 or len(same_gics_ASX_tickers['same_industry_500']) == 1 and f'{ticker_of_interest}.AX' not in same_gics_ASX_tickers['same_industry_500']) \
+#         else {'type': 'same_sector_1bn', 'list': same_gics_ASX_tickers['same_sector_1bn']}
+
+#     # remove self from comparable_tickers
+#     comparable_ASX_tickers_dict['list'] = [
+#         x for x in comparable_ASX_tickers_dict['list'] if x != f'{ticker_of_interest}.AX']
+
+#     return comparable_ASX_tickers_dict
+
 def get_comparable_ASX_tickers(ticker_of_interest: str, same_gics_ASX_tickers: dict):
     """ Get the comparable ASX tickers.
     NOTE: AU ONLY
     """
-    comparable_ASX_tickers_dict = {'type': 'same_industry_500', 'list': same_gics_ASX_tickers['same_industry_500']} if \
-        (len(same_gics_ASX_tickers['same_industry_500']) > 1 or len(same_gics_ASX_tickers['same_industry_500']) == 1 and f'{ticker_of_interest}.AX' not in same_gics_ASX_tickers['same_industry_500']) \
-        else {'type': 'same_sector_1bn', 'list': same_gics_ASX_tickers['same_sector_1bn']}
+    comparable_ASX_tickers_dict = {
+        'type': 'same_sector_500', 'list': same_gics_ASX_tickers['same_sector_500']}
 
     # remove self from comparable_tickers
     comparable_ASX_tickers_dict['list'] = [
