@@ -101,7 +101,7 @@ def create_compound_key_features(
     except KeyError as e:
         stock_fundamentals["Total Asset"] = np.nan
         print(
-            f"Missing data for Total Asset for ticker {TICKER}: raw_stats_list")
+            f"Missing data for Total Asset for ticker {TICKER}: {e}")
 
     return stock_fundamentals
 
@@ -251,27 +251,27 @@ def get_key_statistics(stock_fundamentals: pd.DataFrame, ticker: str) -> pd.Data
     return stock_fundamentals
 
 
-def get_key_interested_fundamentals_stat_pct_change(
+def get_key_interested_fundamentals_stat_diff(
     key_interested_fundamentals_stats: pd.DataFrame,
 ) -> pd.DataFrame:
-    key_interested_fundamentals_stats_pct_change = key_interested_fundamentals_stats.pct_change() * \
-        100
-    key_interested_fundamentals_stats_pct_change.rename(
+    key_interested_fundamentals_stats_diff = key_interested_fundamentals_stats.diff()
+    key_interested_fundamentals_stats_diff.rename(
         columns={
-            "Net Profit Margin": "Net Profit Margin (%)",
-            "Net Income Margin": "Net Income Margin (%)",
-            "RoE": "RoE (%)",
-            "RoA": "RoA (%)",
-            "P/E": "P/E (%)",
-            "P/B": "P/B (%)",
-            "D/E": "D/E (%)",
-            "Current Ratio": "Current Ratio (%)",
-            "Interest Coverage Ratio": "Interest Coverage Ratio (%)",
-            "DPS": "DPS (%)",
+            "Net Profit Margin": "Net Profit Margin (Δ)",
+            "Net Income Margin": "Net Income Margin (Δ)",
+            "RoE": "RoE (Δ)",
+            "RoA": "RoA (Δ)",
+            "P/E": "P/E (Δ)",
+            "P/B": "P/B (Δ)",
+            "D/E": "D/E (Δ)",
+            "Current Ratio": "Current Ratio (Δ)",
+            "Interest Coverage Ratio": "Interest Coverage Ratio (Δ)",
+            "DPS": "DPS (Δ)",
+            "Free Cash Flow": "Free Cash Flow (Δ)",
         },
         inplace=True,
     )
-    return key_interested_fundamentals_stats_pct_change.astype(float).round(2)
+    return key_interested_fundamentals_stats_diff.astype(float).round(2)
 
 
 def preprocess_dividends(
@@ -365,14 +365,14 @@ def get_fundamentals_dfs(first_end_of_quarter, historical_prices, TICKER, COUNTR
     key_interested_fundamentals_stats = get_key_interested_fundamentals_stats(
         stock_fundamentals)
 
-    key_interested_fundamentals_stats_fundamentals_pct_change = get_key_interested_fundamentals_stat_pct_change(
+    key_interested_fundamentals_stats_fundamentals_diff = get_key_interested_fundamentals_stat_diff(
         key_interested_fundamentals_stats
     )
 
     return (
         raw_fundamentals_stats,
         key_interested_fundamentals_stats.astype(float).round(2),
-        key_interested_fundamentals_stats_fundamentals_pct_change.astype(
+        key_interested_fundamentals_stats_fundamentals_diff.astype(
             float).round(2),
         object
     )
@@ -393,12 +393,13 @@ def process_stock_fundamentals(stock_fundamentals: pd.DataFrame, object: str, fi
 
 
 def get_raw_stats(stock_fundamentals: pd.DataFrame) -> pd.DataFrame:
-    raw_stats = stock_fundamentals.loc[
-        :,
-        ~stock_fundamentals.columns.isin(
-            FUNDAMENTALS_RAW_COLUMNS
-        ),
-    ]
+    # raw_stats = stock_fundamentals.loc[
+    #     :,
+    #     ~stock_fundamentals.columns.isin(
+    #         FUNDAMENTALS_RAW_COLUMNS
+    #     ),
+    # ]
+    raw_stats = copy.deepcopy(stock_fundamentals)
     return raw_stats
 
 
@@ -432,18 +433,18 @@ def interpolate_fundamentals_stats(raw_stats_list: list, key: str) -> pd.DataFra
 
         if i == 0:
             # find number of dates in the new index that are less than the current date
-            dates_biannual = new_index[new_index <= dt]
-            number_biannual = len(dates_biannual)
+            dates_halfyear = new_index[new_index <= dt]
+            number_halfyear = len(dates_halfyear)
 
         else:
-            dates_biannual = new_index[(new_index <= dt) & (
+            dates_halfyear = new_index[(new_index <= dt) & (
                 new_index > raw_stats_list[key].index[i-1])]
-            number_biannual = len(dates_biannual)
+            number_halfyear = len(dates_halfyear)
 
-        # now each row's values divide by number_biannual
-        row_values = raw_stats_list[key].iloc[i].values / number_biannual
+        # now each row's values divide by number_halfyear
+        row_values = raw_stats_list[key].iloc[i].values / number_halfyear
 
-        for date in dates_biannual:
+        for date in dates_halfyear:
             new_rows_dict[date] = row_values
 
     out = pd.DataFrame(
@@ -474,10 +475,10 @@ def agg_interpolated_fundamentals_stats(interpolated_fundamentals_stats: pd.Data
     return interested_fundamentals_stats
 
 
-def get_weighted_fundamentals(key_interested_fundamentals_stats_pct_change_dict: dict, same_gics_industry_weight_dict: dict) -> pd.DataFrame:
+def get_weighted_fundamentals(stats_df_dict: dict, same_gics_industry_weight_dict: dict) -> pd.DataFrame:
     """ Get the weighted fundamentals of the key interested stats """
 
-    example_df = key_interested_fundamentals_stats_pct_change_dict[list(key_interested_fundamentals_stats_pct_change_dict.keys())[
+    example_df = stats_df_dict[list(stats_df_dict.keys())[
         0]]
 
     output_dict = dict()
@@ -490,10 +491,10 @@ def get_weighted_fundamentals(key_interested_fundamentals_stats_pct_change_dict:
 
             weight = 0
 
-            for key in key_interested_fundamentals_stats_pct_change_dict:
+            for key in stats_df_dict:
                 try:
 
-                    value = key_interested_fundamentals_stats_pct_change_dict[key].loc[date, column]
+                    value = stats_df_dict[key].loc[date, column]
 
                 except KeyError as e:
                     print(f"Column {column} not found for ticker {key}: {e}")
@@ -507,10 +508,14 @@ def get_weighted_fundamentals(key_interested_fundamentals_stats_pct_change_dict:
             if weight != 0:
                 output_dict[date][column] /= weight
 
-        weighted_GICS_key_interested_fundamentals_stats_pct_change = pd.DataFrame(
+        weighted_GICS_key_interested_fundamentals_stats = pd.DataFrame(
             output_dict)
-        weighted_GICS_key_interested_fundamentals_stats_pct_change = weighted_GICS_key_interested_fundamentals_stats_pct_change.T
-    return weighted_GICS_key_interested_fundamentals_stats_pct_change
+        weighted_GICS_key_interested_fundamentals_stats = weighted_GICS_key_interested_fundamentals_stats.T
+
+        adjusted_FUNDAMENTALS_RAW_COLUMNS = [
+            col for col in FUNDAMENTALS_RAW_COLUMNS if col in weighted_GICS_key_interested_fundamentals_stats.columns]
+
+    return weighted_GICS_key_interested_fundamentals_stats[adjusted_FUNDAMENTALS_RAW_COLUMNS]
 
 
 def plot_raw_fundamentals_stats_table(interested_ticker_raw_fundamentals_stats: pd.DataFrame, TICKER: str):
@@ -520,7 +525,7 @@ def plot_raw_fundamentals_stats_table(interested_ticker_raw_fundamentals_stats: 
     )
 
     # Create the plot for the table
-    fig, ax = plt.subplots(figsize=(18, 8))  # Adjust the figure size as needed
+    fig, ax = plt.subplots(figsize=(30, 8))  # Adjust the figure size as needed
     ax.axis('tight')
     ax.axis('off')
 
@@ -588,9 +593,9 @@ def plot_key_fundamentals_multipliers_table(interested_ticker_key_interested_fun
     plt.show()
 
 
-def plot_key_fundamentals_multipliers_pct_change_table(interested_ticker_key_interested_fundamentals_stats_pct_change: pd.DataFrame, TICKER: str):
+def plot_key_fundamentals_multipliers_diff_table(interested_ticker_key_interested_fundamentals_stats_diff: pd.DataFrame, TICKER: str):
 
-    formatted_stats = interested_ticker_key_interested_fundamentals_stats_pct_change.applymap(
+    formatted_stats = interested_ticker_key_interested_fundamentals_stats_diff.applymap(
         lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x
     )
 
@@ -615,11 +620,11 @@ def plot_key_fundamentals_multipliers_pct_change_table(interested_ticker_key_int
             cell.set_text_props(fontweight='bold')
 
     # Set the title with bold font
-    plt.title(f"{TICKER} Key Stats %Change", fontsize=16, fontweight='bold')
+    plt.title(f"{TICKER} Key Stats Δ", fontsize=16, fontweight='bold')
 
     # Save the plot as an image
     plt.savefig(
-        f'../outputs/{TICKER}_interested_ticker_key_interested_stats_pct_change.png', bbox_inches='tight', dpi=300)
+        f'../outputs/{TICKER}_interested_ticker_key_interested_stats_diff.png', bbox_inches='tight', dpi=300)
 
     # Optionally display the plot
     plt.show()
@@ -643,10 +648,10 @@ def plot_key_fundamentals_multipliers(interested_ticker_key_interested_fundament
                     primary_data, label=TICKER)
 
             for i in range(1, len(primary_data)):
-                pct_change_primary = (
-                    (primary_data[i] - primary_data[i - 1]) / primary_data[i - 1]) * 100
+                diff_primary = (
+                    (primary_data[i] - primary_data[i - 1]))
                 ax.text(primary_data.index[i], primary_data[i],
-                        f'{pct_change_primary:.1f}%', color='black', fontsize=8, ha='center')
+                        f'{diff_primary:.1f}', color='black', fontsize=8, ha='center')
         except KeyError as e:
             print(f"Column {column} not found for ticker {TICKER}: {e}")
 
@@ -658,10 +663,10 @@ def plot_key_fundamentals_multipliers(interested_ticker_key_interested_fundament
                     gics_data, label=f'{TICKER} {label_suffix}')
 
             for i in range(1, len(gics_data)):
-                pct_change_gics = (
-                    (gics_data[i] - gics_data[i - 1]) / gics_data[i - 1]) * 100
+                diff_gics = (
+                    (gics_data[i] - gics_data[i - 1]))
                 ax.text(gics_data.index[i], gics_data[i],
-                        f'{pct_change_gics:.1f}%', color='gray', fontsize=8, ha='center')
+                        f'{diff_gics:.1f}', color='gray', fontsize=8, ha='center')
         except KeyError as e:
             print(f"Column {column} not found for GICS: {e}")
 
@@ -689,7 +694,7 @@ def get_raw_fundamentals_stats(comparable_ASX_tickers_dict: dict, first_end_of_q
     for ticker in comparable_ASX_tickers_dict['list']:
         ticker = ticker.split('.')[0]
         print('\n', ticker)
-        raw_stats, key_interested_stats, key_interested_stats_pct_change, object = get_fundamentals_dfs(
+        raw_stats, key_interested_stats, key_interested_stats_diff, object = get_fundamentals_dfs(
             first_end_of_quarter, historical_prices_dict, ticker, COUNTRY)
 
         raw_fundamentals_stats_dict[ticker] = raw_stats
@@ -710,11 +715,11 @@ def interpolate_fundamentals(raw_fundamentals_stats_dict: dict):
     return interpolated_fundamentals_stats_dict
 
 
-def get_interested_fundamentals_dates(interested_ticker_key_interested_fundamentals_stats_pct_change: pd.DataFrame):
+def get_interested_fundamentals_dates(interested_ticker_key_interested_fundamentals_stats_diff: pd.DataFrame):
     """ Get the dates that the ticker of interest has fundamentals for, to agg the interpolated fundamentals stats """
 
     interested_dates = [pd.to_datetime(
-        dt.strftime('%Y-%m')) for dt in interested_ticker_key_interested_fundamentals_stats_pct_change.index]
+        dt.strftime('%Y-%m')) for dt in interested_ticker_key_interested_fundamentals_stats_diff.index]
 
     return interested_dates
 
@@ -731,14 +736,14 @@ def agg_interpolated_fundamentals_stats_for_comparable_tickers(interpolated_fund
     return agg_interpolated_fundamentals_stats_df_dict
 
 
-def get_agg_interpolated_fundamentals_stats(raw_fundamentals_stats_dict: dict, interested_ticker_key_interested_fundamentals_stats_pct_change: pd.DataFrame):
+def get_agg_interpolated_fundamentals_stats(raw_fundamentals_stats_dict: dict, interested_ticker_key_interested_fundamentals_stats_diff: pd.DataFrame):
     """ Aggregate interpolated fundamentals stats for all tickers in interpolated_fundamentals_stats_dict """
 
     interpolated_fundamentals_stats_dict = interpolate_fundamentals(
         raw_fundamentals_stats_dict)
 
     interested_dates = get_interested_fundamentals_dates(
-        interested_ticker_key_interested_fundamentals_stats_pct_change)
+        interested_ticker_key_interested_fundamentals_stats_diff)
 
     agg_interpolated_fundamentals_stats_df_dict = agg_interpolated_fundamentals_stats_for_comparable_tickers(
         interpolated_fundamentals_stats_dict, interested_dates)
@@ -750,7 +755,7 @@ def get_key_interested_fundamentals_stats_for_comparable(agg_interpolated_fundam
     """ Get key interested fundamentals stats from the stock_fundamentals """
 
     key_interested_fundamentals_stats_dict = {}
-    key_interested_fundamentals_stats_pct_change_dict = {}
+    key_interested_fundamentals_stats_diff_dict = {}
 
     for key in agg_interpolated_fundamentals_stats_df_dict:
 
@@ -763,11 +768,11 @@ def get_key_interested_fundamentals_stats_for_comparable(agg_interpolated_fundam
             stock_fundamentals)
 
         # get key interested stats pct change
-        key_interested_stats_pct_change = get_key_interested_fundamentals_stat_pct_change(
+        key_interested_stats_diff = get_key_interested_fundamentals_stat_diff(
             key_interested_stats
         )
 
         key_interested_fundamentals_stats_dict[key] = key_interested_stats
-        key_interested_fundamentals_stats_pct_change_dict[key] = key_interested_stats_pct_change
+        key_interested_fundamentals_stats_diff_dict[key] = key_interested_stats_diff
 
-    return key_interested_fundamentals_stats_dict, key_interested_fundamentals_stats_pct_change_dict
+    return key_interested_fundamentals_stats_dict, key_interested_fundamentals_stats_diff_dict

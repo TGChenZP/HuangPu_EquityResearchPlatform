@@ -177,7 +177,7 @@ def create_pdf(
         )
         pdf.ln(5)
         pdf.image(
-            f"../outputs/{TICKER}_interested_ticker_key_interested_stats_pct_change.png",
+            f"../outputs/{TICKER}_interested_ticker_key_interested_stats_diff.png",
             x=10,
             y=None,
             w=175,
@@ -186,7 +186,7 @@ def create_pdf(
         if COUNTRY == "AU":
             # gics multipliers pct change
             pdf.image(
-                f"../outputs/{TICKER} GICS {'I' if 'industry' in comparable_ASX_tickers_dict['type'] else 'S'}.WMean_interested_ticker_key_interested_stats_pct_change.png",
+                f"../outputs/{TICKER} GICS {'I' if 'industry' in comparable_ASX_tickers_dict['type'] else 'S'}.WMean_interested_ticker_key_interested_stats_diff.png",
                 x=10,
                 y=None,
                 w=175,

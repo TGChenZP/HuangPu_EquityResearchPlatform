@@ -25,7 +25,7 @@ FUNDAMENTALS_RAW_COLUMNS = [
     "Current Ratio",
     "Interest Coverage Ratio",
     "DPS",
-    "Free Cash Flow",
+    "Free Cash Flow"
 ]
 
 CASHFLOW_ROWS = [
