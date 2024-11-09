@@ -40,6 +40,8 @@ BALANCE_SHEET_ROWS = [
     "Share Issued",  # n shares
     "Current Liabilities",  # total current liabilities,
     "Current Assets",  # total current assets
+    "Total Assets",  # total assets,
+    "Total Liabilities Net Minority Interest",  # total liabilities
 ]
 
 FUNDAMENTAL_ROWS = [
@@ -50,4 +52,6 @@ FUNDAMENTAL_ROWS = [
     "Net Income",  # net income
     "Total Revenue",  # revenue
     "Interest Expense",  # interest expense
+    "Tax Provision",
+
 ]
