@@ -1,4 +1,5 @@
 # Proxy for 200, 300, small ord, all ords
+AVAILABLE_MARKETS = ['AU', 'US']
 
 AU_GICS_FILL = {
     'NWSLV.AX': {'Sector': 'Communication Services', 'Industry': 'Entertainment'},
@@ -12,6 +13,8 @@ AU_GICS_FILL = {
 
 au_index_tickers_list = ['^AXJO', '^AXKO', '^AXSO', '^AORD']
 us_index_tickers_list = ['^GSPC', '^RUA', '^RUT', '^W5000']
+cn_index_tickers_list = ['000016.SS', '000300.SS', '399001.SZ', '000001.SS']
+hk_index_tickers_list = ['^HSCCI', '^HSI', '^HSCEI', '^HSCI']
 
 
 FUNDAMENTALS_RAW_COLUMNS = [
@@ -25,15 +28,18 @@ FUNDAMENTALS_RAW_COLUMNS = [
     "Current Ratio",
     "Interest Coverage Ratio",
     "DPS",
+    "Dividend Yield",
     "Free Cash Flow"
 ]
 
+# from cashflow
 CASHFLOW_ROWS = [
     "Free Cash Flow",  # cashflow
     "Interest Paid Supplemental Data",
     "Income Tax Paid Supplemental Data",
 ]
 
+# from balance sheet
 BALANCE_SHEET_ROWS = [
     "Total Debt",  # total debt
     "Stockholders Equity",  # total shareholder equity.
@@ -44,6 +50,7 @@ BALANCE_SHEET_ROWS = [
     "Total Liabilities Net Minority Interest",  # total liabilities
 ]
 
+# from financials
 FUNDAMENTAL_ROWS = [
     "EBITDA",
     "EBIT",
@@ -53,5 +60,6 @@ FUNDAMENTAL_ROWS = [
     "Total Revenue",  # revenue
     "Interest Expense",  # interest expense
     "Tax Provision",
+    "Total Expenses"
 
 ]
