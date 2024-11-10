@@ -1,5 +1,6 @@
 import pandas as pd
 from utils.init import *
+from utils.params import AVAILABLE_MARKETS
 
 
 def get_prices(
@@ -188,7 +189,7 @@ def get_gics_industry_weighted_mean(
 
 def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str, country: str):
     """ Get the mean, std, sharpe, beta, alpha of the stock """
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
 
     SHARPE_MONTHLY_MULTIPLIER = 12
 
@@ -474,7 +475,7 @@ def plot_returns_comparative(
     country: str,
     **kwargs,
 ):
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
 
     # Define a consistent color scheme for all returns
     ticker_color = "red"
@@ -901,7 +902,7 @@ def get_stats_df(interested_ticker: str, stats_df: dict, comparable_ASX_tickers_
 def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country: str):
     """ Get historical dividends for a given ticker """
 
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
 
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_dividends = historical_prices_dict[TICKER]
@@ -929,7 +930,7 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country:
 
 def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_prices_dict: dict, country: str):
 
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
 
     # Assuming historical_dividends is your DataFrame for a specific TICKER
     # Convert the date to AEST
@@ -1001,7 +1002,7 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
 def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: str):
     """ Get historical splits for a given ticker """
 
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_splits = historical_prices_dict[TICKER]
 
@@ -1028,7 +1029,7 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: st
 
 def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, country: str):
     """ Plot stock splits over time for a given ticker """
-    assert country in ['AU', 'US'], "Country must be AU or US"
+    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
     # Assuming historical_splits is your DataFrame for a specific TICKER
     # Convert the date to AEST
     historical_splits = historical_prices_dict[TICKER]
@@ -1167,3 +1168,11 @@ def get_monthly_stats_for_all_tickers(monthly_returns_df_dict: dict, comparable_
     stats_df = get_stats_df(TICKER, stats_df, comparable_ASX_tickers_dict,
                             index_tickers_list, same_industry_tickers_mcap_df)
     return stats_df
+
+
+def get_market_value_rank(TICKER: str, asx_gics_df: pd.DataFrame) -> int:
+    sorted_asx_gics_df = asx_gics_df.sort_values(
+        'Market Cap', ascending=False).reset_index(drop=True)
+    market_value_rank = sorted_asx_gics_df[sorted_asx_gics_df['Ticker']
+                                           == TICKER+'.AX'].index[0]+1
+    return market_value_rank

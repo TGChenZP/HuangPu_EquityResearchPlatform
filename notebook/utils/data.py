@@ -1,12 +1,10 @@
 from utils.init import *
 from utils.params import *
 
-from utils.params import *
-
 
 def get_index_tickers_list(country: str) -> list:
 
-    assert country in ['AU', 'US'], 'Country must be either AU or US'
+    assert country in AVAILABLE_MARKETS, 'Country must be either AU or US'
 
     if country == 'AU':
         return au_index_tickers_list

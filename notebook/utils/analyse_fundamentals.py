@@ -11,7 +11,7 @@ def get_balance_sheet_df(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
             balance_sheet_df_list.append(balance_sheet_row)
         except KeyError as e:
             print(
-                f"Missing data for {balance_sheet_row} for ticker {TICKER}: {e}")
+                f"Missing column from balance sheet for ticker {TICKER}: {e}")
 
     get_balance_sheet_df = pd.concat(balance_sheet_df_list, axis=1)
 
@@ -28,7 +28,8 @@ def get_cashflow_df(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
             cashflow_df_list.append(cashflow_row)
 
         except KeyError as e:
-            print(f"{cashflow_row} not found for ticker {TICKER}: {e}")
+            print(
+                f"Missing column from cashflow table for ticker {TICKER}: {e}")
 
     cashflow_df = pd.concat(cashflow_df_list, axis=1)
 
@@ -38,13 +39,17 @@ def get_cashflow_df(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
 def get_fundamental_cols_dfs(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
     fundamentals_df_list = list()
 
+    for col in object.financials.index:
+        if 'Expense' in col and col not in FUNDAMENTAL_ROWS:
+            FUNDAMENTAL_ROWS.append(col)
+
     for fundamentals_row in FUNDAMENTAL_ROWS:
         try:
             finacial_row = object.financials.loc[fundamentals_row]
             fundamentals_df_list.append(finacial_row)
         except KeyError as e:
             print(
-                f"Missing data for {fundamentals_row} for ticker {TICKER}: {e}")
+                f"Missing data for financials table for ticker {TICKER}: {e}")
 
     fundamentals_df = pd.concat(fundamentals_df_list, axis=1)
 
@@ -55,11 +60,24 @@ def create_compound_key_features(
     stock_fundamentals: pd.DataFrame, TICKER: str
 ) -> pd.DataFrame:
     try:
-        stock_fundamentals["Net Profit"] = (
-            stock_fundamentals['Total Revenue'] -
-            stock_fundamentals['Interest Expense'] -
-            stock_fundamentals['Tax Provision']
-        )
+        if 'Total Expenses' in stock_fundamentals.columns:
+            stock_fundamentals["Net Profit"] = (
+                stock_fundamentals['Total Revenue'] -
+                stock_fundamentals['Total Expenses'] -
+                stock_fundamentals['Tax Provision']
+            )
+        else:
+            stock_fundamentals["Net Profit"] = (
+                stock_fundamentals['Total Revenue'] -
+                stock_fundamentals['Interest Expense'] -
+                stock_fundamentals['Tax Provision']
+            )
+
+            for col in stock_fundamentals.columns:
+                if 'Expense' in col \
+                    and col not in ['Total Expenses', 'Interest Expense'] \
+                        and 'Income Expense' not in col:
+                    stock_fundamentals['Net Profit'] -= stock_fundamentals[col]
 
     except KeyError as e:
         stock_fundamentals["Net Profit"] = np.nan
@@ -170,31 +188,31 @@ def get_key_statistics(stock_fundamentals: pd.DataFrame, ticker: str) -> pd.Data
             stock_fundamentals["Net Profit"]
             / stock_fundamentals["Average Shareholder Equity"].replace(0, np.nan)
         )
-    except:
+    except KeyError as e:
         stock_fundamentals["RoE"] = np.nan
-        print(f"Missing data for RoE for ticker {ticker}")
+        print(f"Missing data for RoE for ticker {ticker}: {e}")
 
     try:
         stock_fundamentals["RoA"] = (
             stock_fundamentals["Net Profit"] /
             stock_fundamentals["Total Assets"].replace(0, np.nan)
         )
-    except:
+    except KeyError as e:
         stock_fundamentals["RoA"] = np.nan
-        print(f"Missing data for RoA for ticker {ticker}")
+        print(f"Missing data for RoA for ticker {ticker}: {e}")
 
     try:
         stock_fundamentals["P/E"] = stock_fundamentals["Last Close Price"] / (
-            stock_fundamentals["Net Income"] /
-            stock_fundamentals["Share Issued"].replace(0, np.nan)
+            (stock_fundamentals["Net Income"] /
+             stock_fundamentals["Share Issued"].replace(0, np.nan)).replace(0, np.nan)
         )
-    except:
+    except KeyError as e:
         stock_fundamentals["P/E"] = np.nan
-        print(f"Missing data for P/E for ticker {ticker}")
+        print(f"Missing data for P/E for ticker {ticker}: {e}")
 
     try:
         stock_fundamentals["P/B"] = stock_fundamentals["Last Close Price"] / (
-            stock_fundamentals["Stockholders Equity"] /
+            stock_fundamentals["Book Value"] /
             stock_fundamentals["Share Issued"].replace(0, np.nan)
         )
     except KeyError as e:
@@ -206,6 +224,15 @@ def get_key_statistics(stock_fundamentals: pd.DataFrame, ticker: str) -> pd.Data
     except KeyError as e:
         stock_fundamentals["DPS"] = np.nan
         print(f"Missing data for DPS for ticker {ticker}: {e}")
+
+    try:
+        stock_fundamentals['Dividend Yield'] = 100*(
+            stock_fundamentals["DPS"] /
+            stock_fundamentals["Last Close Price"].replace(0, np.nan)
+        )
+    except KeyError as e:
+        stock_fundamentals['Dividend Yield'] = np.nan
+        print(f"Missing data for Dividend Yield for ticker {ticker}: {e}")
 
     try:
         stock_fundamentals["D/E"] = (
@@ -254,6 +281,7 @@ def get_key_interested_fundamentals_stat_diff(
             "Current Ratio": "Current Ratio (Δ)",
             "Interest Coverage Ratio": "Interest Coverage Ratio (Δ)",
             "DPS": "DPS (Δ)",
+            "Dividend Yield": "Dividend Yield (Δ)",
             "Free Cash Flow": "Free Cash Flow (Δ)",
         },
         inplace=True,
@@ -503,7 +531,7 @@ def get_weighted_fundamentals(stats_df_dict: dict, same_gics_industry_weight_dic
             if col not in weighted_GICS_key_interested_fundamentals_stats.columns:
                 weighted_GICS_key_interested_fundamentals_stats[col] = np.nan
 
-    return weighted_GICS_key_interested_fundamentals_stats
+    return weighted_GICS_key_interested_fundamentals_stats[FUNDAMENTALS_RAW_COLUMNS]
 
 
 def plot_raw_fundamentals_stats_table(interested_ticker_raw_fundamentals_stats: pd.DataFrame, TICKER: str):

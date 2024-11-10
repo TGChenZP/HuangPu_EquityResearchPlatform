@@ -9,6 +9,7 @@ def create_pdf(
     got_fundamentals,
     TICKER,
     COUNTRY,
+    market_value_rank,
     **kwargs,
 ):
 
@@ -34,28 +35,26 @@ def create_pdf(
         # text = f"{'same INDUSTRY of TOP500' if 'industry' in comparable_ASX_tickers_dict['type'] else 'same SECTOR of MCAP$1BN+'}"
         text = f"Sector: {ASX_ticker_gics_dict['Sector']}, Industry: {ASX_ticker_gics_dict['Industry']}"
         pdf.cell(200, 10, txt=text, ln=True, align="L")
+        text = f"Market Value Rank in Market: {market_value_rank}"
+        pdf.cell(200, 10, txt=text, ln=True, align="L")
 
-        if COUNTRY == "AU" and not (
-            ASX_ticker_gics_dict["Sector"] == "Unknown"
-            and ASX_ticker_gics_dict["Industry"] == "Unknown"
-        ):
-            # INDUSTRY TICKER MCAP TABLE
-            # Optional: Add a title before the image
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(
-                200,
-                10,
-                txt=f"{TICKER} Same {'Industry' if 'industry' in comparable_ASX_tickers_dict['type'] else 'Sector'} Ticker MCAP Table",
-                ln=True,
-                align="L",
-            )
-            pdf.ln(5)  # Line break before adding the image
-            pdf.image(
-                f"../outputs/{TICKER}_same_industry_tickers_mcap_table.png",
-                x=10,
-                y=None,
-                w=50,
-            )
+        # INDUSTRY TICKER MCAP TABLE
+        # Optional: Add a title before the image
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(
+            200,
+            10,
+            txt=f"{TICKER} Same {'Industry' if 'industry' in comparable_ASX_tickers_dict['type'] else 'Sector'} Ticker MCAP Table",
+            ln=True,
+            align="L",
+        )
+        pdf.ln(5)  # Line break before adding the image
+        pdf.image(
+            f"../outputs/{TICKER}_same_industry_tickers_mcap_table.png",
+            x=10,
+            y=None,
+            w=50,
+        )
 
         # Retrieve and convert the Market Cap of the stock in question (from ticker_mv) to billions
         ticker_market_cap_billion = round(
@@ -205,6 +204,7 @@ def create_pdf(
             f"../outputs/{TICKER}_Current Ratio_comparison.png",
             f"../outputs/{TICKER}_Interest Coverage Ratio_comparison.png",
             f"../outputs/{TICKER}_DPS_comparison.png",
+            f'../outputs/{TICKER}_Dividend Yield_comparison.png',
             f"../outputs/{TICKER}_Free Cash Flow_comparison.png",
         ]
 
