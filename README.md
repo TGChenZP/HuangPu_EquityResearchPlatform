@@ -1,11 +1,26 @@
-# Research_ValueInvesting
-
+# Project HuangPu: Equity Analysis Platform
 
 
 ## Requirements
-run ```requirements.txt```
+Run ```requirements.txt```
 
-## Metrics Calculated
+## Instructions
+
+1. Manually download interest rate data for Australia, US, China Mainland and China HKSAR from investing.com.
+
+* You must manually select **Monthly** timeframe for 5 years, and do not alter the file name
+
+* Note that the 10 year bond yield is an approximation to interest rates when calculating beta and alpha
+
+   [Australia](https://au.investing.com/rates-bonds/australia-10-year-bond-yield-historical-data);
+   [US](https://au.investing.com/rates-bonds/u.s.-10-year-bond-yield-historical-data); [Chinese Mainland](https://au.investing.com/rates-bonds/china-10-year-bond-yield-historical-data); [Hong Kong SAR](https://au.investing.com/rates-bonds/hong-kong-10-year-bond-yield-historical-data)
+
+
+2. Run `stock_info.ipynb` to automatically retrieve asx company directories and asx gics
+
+3. Run `analysis.ipynb`, changing TICKER, MARKET and end of quarter data to match needs
+
+## Metrics Calculation
 
 ### 1. **Average Shareholder Equity**
    - **Calculation**: Average of the previous and current `Stockholder Equity`
@@ -65,4 +80,6 @@ run ```requirements.txt```
 
 ---
 
-This README should help users understand the purpose and methodology behind each financial metric, enabling them to make informed decisions when analyzing stocks.
+Bibliography:
+
+- [Yahoo Finance](https://au.finance.yahoo.com/)
