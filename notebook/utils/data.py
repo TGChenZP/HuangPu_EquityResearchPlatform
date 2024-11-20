@@ -2,26 +2,33 @@ from utils.init import *
 from utils.params import *
 
 
-def get_index_tickers_list(country: str) -> list:
+def get_index_tickers_list(market: str) -> list:
 
-    assert country in AVAILABLE_MARKETS, 'Country must be either AU or US'
+    assert market in AVAILABLE_MARKETS, 'market not supported'
 
-    if country == 'AU':
+    if market == 'AU':
         return au_index_tickers_list
-    elif country == 'US':
+    elif market == 'US':
         return us_index_tickers_list
+    elif market == 'CN':
+        return cn_index_tickers_list
+    elif market == 'HK':
+        return hk_index_tickers_list
 
 
-def get_interest_rate(country: str) -> dict:
+def get_interest_rate(market: str) -> dict:
     """ Get interest rate data for US and AU """
 
-    assert country in ['US', 'AU'], 'Country not supported'
+    assert market in AVAILABLE_MARKETS, 'market not supported'
 
     interest_rate_df_dict = {}
 
+    market_full_name = {'AU': 'Australia',
+                        'US': 'United States', 'CN': 'China', 'HK': 'Hong Kong'}
+
     # open the file
     interest_rate_df = pd.read_csv(
-        '../data/Australia 10-Year Bond Yield Historical Data.csv')
+        f'../data/{market_full_name[market]} 10-Year Bond Yield Historical Data.csv')
 
     interest_rate_df_dict['raw'] = interest_rate_df
 

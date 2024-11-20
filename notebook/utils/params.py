@@ -1,5 +1,5 @@
 # Proxy for 200, 300, small ord, all ords
-AVAILABLE_MARKETS = ['AU', 'US']
+AVAILABLE_MARKETS = ['AU', 'US', 'CN', 'HK']
 
 AU_GICS_FILL = {
     'NWSLV.AX': {'Sector': 'Communication Services', 'Industry': 'Entertainment'},
@@ -13,8 +13,8 @@ AU_GICS_FILL = {
 
 au_index_tickers_list = ['^AXJO', '^AXKO', '^AXSO', '^AORD']
 us_index_tickers_list = ['^GSPC', '^RUA', '^RUT', '^W5000']
-cn_index_tickers_list = ['000016.SS', '000300.SS', '399001.SZ', '000001.SS']
-hk_index_tickers_list = ['^HSCCI', '^HSI', '^HSCEI', '^HSCI']
+cn_index_tickers_list = ['000300.SS', '399001.SZ', '000001.SS']
+hk_index_tickers_list = ['^HSI', '^HSCE', '^HSCI']
 
 
 FUNDAMENTALS_RAW_COLUMNS = [

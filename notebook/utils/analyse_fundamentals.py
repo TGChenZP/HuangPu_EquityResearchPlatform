@@ -1,5 +1,5 @@
 from utils.init import *
-from utils.params import FUNDAMENTALS_RAW_COLUMNS, CASHFLOW_ROWS, BALANCE_SHEET_ROWS, FUNDAMENTAL_ROWS
+from utils.params import FUNDAMENTALS_RAW_COLUMNS, CASHFLOW_ROWS, BALANCE_SHEET_ROWS, FUNDAMENTAL_ROWS, AVAILABLE_MARKETS
 
 
 def get_balance_sheet_df(object: yf.Ticker, TICKER: str) -> pd.DataFrame:
@@ -356,12 +356,15 @@ def get_other_features(
     return stock_fundamentals
 
 
-def get_fundamentals_dfs(first_end_of_quarter, historical_prices, TICKER, COUNTRY):
+def get_fundamentals_dfs(first_end_of_quarter, historical_prices, TICKER, MARKET):
 
-    assert COUNTRY in ["AU", "US"], "COUNTRY must be either 'AU' or 'US'"
+    assert MARKET in AVAILABLE_MARKETS, "market not supported"
 
-    object = yf.Ticker(f"{TICKER}.AX" if COUNTRY ==
-                       "AU" else TICKER if COUNTRY == "US" else TICKER)
+    object = yf.Ticker(f"{TICKER}.AX" if MARKET ==
+                       "AU" else TICKER if MARKET == "US" else
+                       f"{TICKER}.SS" if MARKET == "CN" and TICKER[0] == '6' else
+                       f"{TICKER}.SZ" if MARKET == "CN" and TICKER[0] == '0' else
+                       f'{TICKER}.HK' if MARKET == "HK" else TICKER)
 
     # get balance sheet, concat, sort and change index to date
     balance_sheet_df = get_balance_sheet_df(object, TICKER)
@@ -702,7 +705,7 @@ def plot_key_fundamentals_multipliers(interested_ticker_key_interested_fundament
         plt.show()
 
 
-def get_raw_fundamentals_stats(comparable_ASX_tickers_dict: dict, first_end_of_quarter: str, historical_prices_dict: dict, COUNTRY: str):
+def get_raw_fundamentals_stats(comparable_ASX_tickers_dict: dict, first_end_of_quarter: str, historical_prices_dict: dict, MARKET: str):
     """ Get raw fundamentals stats for all tickers in comparable_ASX_tickers_dict """
 
     raw_fundamentals_stats_dict = dict()
@@ -713,7 +716,7 @@ def get_raw_fundamentals_stats(comparable_ASX_tickers_dict: dict, first_end_of_q
         ticker = ticker.split('.')[0]
         print('\n', ticker)
         raw_stats, key_interested_stats, key_interested_stats_diff, object = get_fundamentals_dfs(
-            first_end_of_quarter, historical_prices_dict, ticker, COUNTRY)
+            first_end_of_quarter, historical_prices_dict, ticker, MARKET)
 
         raw_fundamentals_stats_dict[ticker] = raw_stats
         key_interested_stats_dict[ticker] = key_interested_stats

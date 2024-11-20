@@ -2,14 +2,14 @@ from utils.init import *
 
 
 def create_pdf(
-    ASX_ticker_gics_dict,
-    comparable_ASX_tickers_dict,
-    ticker_mv_df,
-    same_industry_tickers_mcap_df,
     got_fundamentals,
     TICKER,
-    COUNTRY,
-    market_value_rank,
+    MARKET,
+    ASX_ticker_gics_dict={'Sector': 'Unknown', 'Industry': 'Unknown'},
+    comparable_ASX_tickers_dict=None,
+    ticker_mv_df=None,
+    same_industry_tickers_mcap_df=None,
+    market_value_rank=None,
     **kwargs,
 ):
 
@@ -23,7 +23,7 @@ def create_pdf(
     title = f"Stock Analysis of Ticker: {TICKER}"
     pdf.cell(200, 10, txt=title, ln=True, align="C")
 
-    if COUNTRY == "AU" and not (
+    if MARKET == "AU" and not (
         ASX_ticker_gics_dict["Sector"] == "Unknown"
         and ASX_ticker_gics_dict["Industry"] == "Unknown"
     ):
@@ -97,7 +97,7 @@ def create_pdf(
     pdf.ln(5)  # Line break before adding the image
     pdf.image(f"../outputs/{TICKER}_returns.png", x=10, y=None, w=100)
 
-    if COUNTRY == "AU" and not (
+    if MARKET == "AU" and not (
         ASX_ticker_gics_dict["Sector"] == "Unknown"
         and ASX_ticker_gics_dict["Industry"] == "Unknown"
     ):
@@ -159,7 +159,7 @@ def create_pdf(
             w=175,
         )
 
-        if COUNTRY == "AU":
+        if MARKET == "AU":
             # gics multipliers
             pdf.image(
                 f"../outputs/{TICKER} GICS {'I' if 'industry' in comparable_ASX_tickers_dict['type'] else 'S'}.WMean_interested_ticker_key_interested_stats.png",
@@ -182,7 +182,7 @@ def create_pdf(
             w=175,
         )
 
-        if COUNTRY == "AU":
+        if MARKET == "AU":
             # gics multipliers pct change
             pdf.image(
                 f"../outputs/{TICKER} GICS {'I' if 'industry' in comparable_ASX_tickers_dict['type'] else 'S'}.WMean_interested_ticker_key_interested_stats_diff.png",
@@ -251,4 +251,4 @@ def create_pdf(
 
     # Save the PDF after adding the image
     pdf.output(
-        f"../reports/{TICKER}_{COUNTRY}_comparable_tickers_report_with_plot.pdf")
+        f"../reports/{TICKER}_{MARKET}_comparable_tickers_report_with_plot.pdf")

@@ -187,9 +187,9 @@ def get_gics_industry_weighted_mean(
     return return_df_dict
 
 
-def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str, country: str):
+def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_year: str, market: str):
     """ Get the mean, std, sharpe, beta, alpha of the stock """
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "Market not supported"
 
     SHARPE_MONTHLY_MULTIPLIER = 12
 
@@ -230,7 +230,7 @@ def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_
         regression_end_period = returns_df_dict[ticker].index[-1]
 
         # fit regression to get beta and alpha
-        X = returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None].loc[regression_start_period:regression_end_period][
+        X = returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None].loc[regression_start_period:regression_end_period][
             f"M_Return - rf (%)"
         ]
         y = returns_df_dict[ticker].loc[regression_start_period:regression_end_period][
@@ -406,17 +406,21 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     plt.show()
 
 
-def fetch_ticker_price(ticker: str, index_tickers: list, country: str) -> tuple:
+def fetch_ticker_price(ticker: str, index_tickers: list, market: str) -> tuple:
     """
     Helper function to fetch the price data for a given ticker.
     """
-    ticker_with_suffix = f"{ticker}.AX" if (ticker not in index_tickers and country == 'AU') else ticker if (
-        ticker not in index_tickers and country == 'US') else ticker
+    ticker_with_suffix = f"{ticker}.AX" if (ticker not in index_tickers and market == 'AU') else ticker if (
+        ticker not in index_tickers and market == 'US') else \
+        f"{ticker}.SS" if (ticker not in index_tickers and market == 'CN' and ticker[0] == '6') else \
+        f"{ticker}.SZ" if (ticker not in index_tickers and market == 'CN' and ticker[0] == '0') else \
+        f"{ticker}.HK" if (
+            ticker not in index_tickers and market == 'HK') else ticker
     return ticker, get_prices(ticker_with_suffix, "2019-06-01")
 
 
 def get_historical_prices(
-    my_portfolio_tickers_list: list, index_tickers: str, country: str,  historical_prices_dict: list = None,
+    my_portfolio_tickers_list: list, index_tickers: str, market: str,  historical_prices_dict: list = None,
 ) -> dict:
     """
     Fetch historical prices for all tickers in the portfolio concurrently.
@@ -435,7 +439,7 @@ def get_historical_prices(
         # Use starmap to fetch prices concurrently
         results = pool.starmap(
             fetch_ticker_price,
-            [(ticker, index_tickers, country)
+            [(ticker, index_tickers, market)
              for ticker in my_portfolio_tickers_list],
         )
 
@@ -472,10 +476,10 @@ def plot_returns_comparative(
     first_end_of_quarter: str,
     last_end_of_quarter: str,
     comparable_tickers: dict,
-    country: str,
+    market: str,
     **kwargs,
 ):
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "Market not supported"
 
     # Define a consistent color scheme for all returns
     ticker_color = "red"
@@ -519,15 +523,15 @@ def plot_returns_comparative(
         )
 
     aord_monthly_returns = filter_returns(
-        monthly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
+        monthly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
             'M_Return (%)']], first_end_of_quarter
     )
     aord_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
+        quarterly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
             'Q_Return (%)']], first_end_of_quarter
     )
     aord_yearly_returns = filter_returns(
-        yearly_returns_df_dict["^AORD" if country == 'AU' else '^GSPC' if country == 'US' else None][[
+        yearly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
             'Y_Return (%)']], first_end_of_quarter
     )
 
@@ -574,7 +578,7 @@ def plot_returns_comparative(
         x_monthly + bar_width,
         aord_monthly_returns,
         bar_width,
-        "^AORD (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
         aord_color,
         x_labels_monthly,
     )
@@ -631,7 +635,7 @@ def plot_returns_comparative(
         x_quarterly + bar_width,
         aord_quarterly_returns,
         bar_width,
-        "^AORD (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
         aord_color,
         x_labels_quarterly,
     )
@@ -684,7 +688,7 @@ def plot_returns_comparative(
         x_yearly + bar_width,
         aord_yearly_returns,
         bar_width,
-        "^AORD (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
         aord_color,
         x_labels_yearly,
     )
@@ -844,11 +848,11 @@ def get_analysis_needed_ticker_list(interested_ticker: str, index_tickers_list: 
     return analysis_needed_ticker_list
 
 
-def get_historical_prices_for_interested_list(my_portfolio_tickers_list: list, index_tickers_list: list, historical_prices_dict: dict, country: str) -> dict:
+def get_historical_prices_for_interested_list(my_portfolio_tickers_list: list, index_tickers_list: list, historical_prices_dict: dict, market: str) -> dict:
     """ Get the historical prices for the interested list of tickers """
 
     historical_prices_dict = get_historical_prices(
-        my_portfolio_tickers_list, index_tickers_list, country, historical_prices_dict)
+        my_portfolio_tickers_list, index_tickers_list, market, historical_prices_dict)
 
     return historical_prices_dict
 
@@ -899,10 +903,10 @@ def get_stats_df(interested_ticker: str, stats_df: dict, comparable_ASX_tickers_
     return stats_df
 
 
-def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country: str):
+def get_historical_dividends(TICKER: str, historical_prices_dict: dict, market: str):
     """ Get historical dividends for a given ticker """
 
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "Market not available"
 
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_dividends = historical_prices_dict[TICKER]
@@ -915,7 +919,7 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country:
 
     # Convert the 'Date' column to AEST
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
 
     # Now make it timezone unaware but still a timestamp
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
@@ -928,9 +932,9 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict, country:
     return historical_dividends
 
 
-def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_prices_dict: dict, country: str):
+def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_prices_dict: dict, market: str):
 
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "market not supported"
 
     # Assuming historical_dividends is your DataFrame for a specific TICKER
     # Convert the date to AEST
@@ -940,7 +944,7 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
     historical_dividends = historical_dividends.reset_index()
     historical_dividends['Date'] = pd.to_datetime(historical_dividends['Date'])
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
         None)
 
@@ -999,10 +1003,10 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
     plt.show()
 
 
-def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: str):
+def get_historical_splits(TICKER: str, historical_prices_dict: dict, market: str):
     """ Get historical splits for a given ticker """
 
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "market not supported"
     # Convert date to AEST directly using tz_convert, since the index is already timezone-aware
     historical_splits = historical_prices_dict[TICKER]
 
@@ -1014,7 +1018,7 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: st
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
 
     # Now make it timezone unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(
@@ -1027,9 +1031,9 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict, country: st
     return historical_splits
 
 
-def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, country: str):
+def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, market: str):
     """ Plot stock splits over time for a given ticker """
-    assert country in AVAILABLE_MARKETS, "Country must be AU or US"
+    assert market in AVAILABLE_MARKETS, "market not supported"
     # Assuming historical_splits is your DataFrame for a specific TICKER
     # Convert the date to AEST
     historical_splits = historical_prices_dict[TICKER]
@@ -1042,7 +1046,7 @@ def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, country: st
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney' if country == 'AU' else 'US/Eastern' if country == 'US' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
 
     # Now make it timezone-unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(None)
@@ -1158,12 +1162,12 @@ def plot_gics_mcap_weights(TICKER: str, same_industry_tickers_mcap_df: pd.DataFr
         plt.close()
 
 
-def get_monthly_stats_for_all_tickers(monthly_returns_df_dict: dict, comparable_ASX_tickers_dict: dict, index_tickers_list: list, same_industry_tickers_mcap_df: pd.DataFrame, TICKER: str, first_end_of_quarter: str, last_end_of_quarter: str, COUNTRY: str) -> pd.DataFrame:
+def get_monthly_stats_for_all_tickers(monthly_returns_df_dict: dict, comparable_ASX_tickers_dict: dict, index_tickers_list: list, same_industry_tickers_mcap_df: pd.DataFrame, TICKER: str, first_end_of_quarter: str, last_end_of_quarter: str, MARKET: str) -> pd.DataFrame:
     """ Get the monthly returns for the interested ticker """
     stats_dict = {}
     for ticker in monthly_returns_df_dict:
         stats_dict[ticker] = get_monthly_stats(
-            monthly_returns_df_dict, ticker, first_end_of_quarter, last_end_of_quarter, COUNTRY)
+            monthly_returns_df_dict, ticker, first_end_of_quarter, last_end_of_quarter, MARKET)
     stats_df = pd.DataFrame(stats_dict).T
     stats_df = get_stats_df(TICKER, stats_df, comparable_ASX_tickers_dict,
                             index_tickers_list, same_industry_tickers_mcap_df)
