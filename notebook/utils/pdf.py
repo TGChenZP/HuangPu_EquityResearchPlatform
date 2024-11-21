@@ -77,7 +77,8 @@ def create_pdf(
 
     # KEY STATS
     pdf.set_font("Arial", "B", 12)  # Optional: Add a title before the image
-    pdf.cell(200, 10, txt=f"{TICKER} Key Stats", ln=True, align="L")
+    pdf.cell(
+        200, 10, txt=f"{TICKER} 5-year Monthly Return Key Stats", ln=True, align="L")
     pdf.ln(5)  # Line break before adding the image
     pdf.image(
         f"../outputs/{TICKER}_key_ticker_stats_table.png", x=10, y=None, w=175)
