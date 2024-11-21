@@ -20,6 +20,67 @@ Run ```requirements.txt```
 
 3. Run `analysis.ipynb`, changing TICKER, MARKET and end of quarter data to match needs
 
+## Market Benchmarks
+
+This document outlines the benchmarks used for comparisons across different markets. Each market is compared to the following global benchmarks:
+
+- **^GSPC (S&P 500)**: A broad representation of the U.S. equity market.
+- **GLD (Gold)**: A measure of gold prices, representing the precious metals market.
+- **ACWI (MSCI ACWI Index)**: Tracks the performance of stocks from both developed and emerging markets worldwide.
+
+Below are the benchmarks specific to each market, with highlights indicating the indices used for **Sharpe ratio calculations** in each region.
+
+---
+
+### United States (US)
+| Ticker       | Index Name                 | Description                                               |
+|--------------|----------------------------|-----------------------------------------------------------|
+| **^GSPC**    | S&P 500                    | _**Used for Sharpe ratio calculations in the U.S. market**_. Tracks 500 of the largest publicly traded companies in the U.S., representing various industries. It is a key benchmark for the overall U.S. stock market. |
+| **^NDX**     | NASDAQ-100                 | Tracks the 100 largest non-financial companies on NASDAQ. |
+| **^DJI**     | Dow Jones Industrial Average | Tracks 30 blue-chip U.S. companies.                      |
+| **^W5000**   | Wilshire 5000 Total Market Index | Broad measure of the entire U.S. stock market.          |
+
+---
+
+### Australia (AU)
+| Ticker       | Index Name                 | Description                                               |
+|--------------|----------------------------|-----------------------------------------------------------|
+| **^AXJO**    | S&P/ASX 200                | Tracks the top 200 companies by market capitalization in Australia. |
+| **^AXKO**    | S&P/ASX 300                | Extends the ASX 200 to include an additional 100 companies. |
+| **^AORD**    | All Ordinaries             | _**Used for Sharpe ratio calculations in the Australian market**_. Tracks nearly all companies listed on the Australian Securities Exchange. |
+
+---
+
+### China (CN)
+| Ticker       | Index Name                 | Description                                               |
+|--------------|----------------------------|-----------------------------------------------------------|
+| **000300.SS**| CSI 300 Index              | _**Used for Sharpe ratio calculations in the Chinese market**_. Tracks the top 300 stocks from Shanghai and Shenzhen stock exchanges. |
+| **399001.SZ**| Shenzhen Component Index   | Tracks 500 companies listed on the Shenzhen Stock Exchange. |
+| **000001.SS**| SSE Composite Index        | Tracks all stocks listed on the Shanghai Stock Exchange.  |
+
+---
+
+### Hong Kong, China (HKSAR)
+| Ticker       | Index Name                 | Description                                               |
+|--------------|----------------------------|-----------------------------------------------------------|
+| **^HSI**     | Hang Seng Index            | _**Used for Sharpe ratio calculations in the Hong Kong market**_. Tracks the largest 50 companies listed on the Hong Kong Stock Exchange. |
+| **^HSCE**    | Hang Seng China Enterprises Index | Tracks mainland Chinese companies listed in Hong Kong. |
+| **^HSCI**    | Hang Seng Composite Index  | Broad measure of the Hong Kong stock market.             |
+
+---
+
+### MSCI (Global Indices)
+| Ticker       | Index Name                 | Description                                               |
+|--------------|----------------------------|-----------------------------------------------------------|
+| **ACWI**     | MSCI ACWI Index            | _**Used for Sharpe ratio calculations in MSCI-based comparisons**_. Tracks the performance of stocks across 23 developed and 24 emerging markets worldwide, providing a comprehensive view of the global equity market. |
+| **ACWX**     | MSCI ACWI ex USA Index     | Tracks the performance of stocks outside the U.S. market. |
+| **EFA**      | MSCI EAFE Index            | Tracks large- and mid-cap stocks in developed markets outside the U.S. and Canada. |
+
+One must use either US or MSCI as market when analysing Gold ETFs
+
+## Interest Rate
+- MSCI class assets use US interest rates as a proxy
+
 ## Metrics Calculation
 
 ### 1. **Average Shareholder Equity**
