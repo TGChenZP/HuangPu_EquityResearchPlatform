@@ -14,6 +14,8 @@ def get_index_tickers_list(market: str) -> list:
         return cn_index_tickers_list
     elif market == 'HK':
         return hk_index_tickers_list
+    elif market == 'MSCI':
+        return msci_index_tickers_list
 
 
 def get_interest_rate(market: str) -> dict:
@@ -24,7 +26,7 @@ def get_interest_rate(market: str) -> dict:
     interest_rate_df_dict = {}
 
     market_full_name = {'AU': 'Australia',
-                        'US': 'United States', 'CN': 'China', 'HK': 'Hong Kong'}
+                        'US': 'United States', 'CN': 'China', 'HK': 'Hong Kong', 'MSCI': 'United States'}
 
     # open the file
     interest_rate_df = pd.read_csv(

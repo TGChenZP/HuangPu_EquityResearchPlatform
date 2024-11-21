@@ -1,5 +1,5 @@
 # Proxy for 200, 300, small ord, all ords
-AVAILABLE_MARKETS = ['AU', 'US', 'CN', 'HK']
+AVAILABLE_MARKETS = ['AU', 'US', 'CN', 'HK', 'MSCI', 'GOLD']
 
 AU_GICS_FILL = {
     'NWSLV.AX': {'Sector': 'Communication Services', 'Industry': 'Entertainment'},
@@ -11,11 +11,13 @@ AU_GICS_FILL = {
     'WQG.AX': {'Sector': 'Financials', 'Industry': 'Investment Management'}
 }
 
-au_index_tickers_list = ['^AXJO', '^AXKO', '^AXSO', '^AORD']
-us_index_tickers_list = ['^GSPC', '^RUA', '^RUT', '^W5000']
-cn_index_tickers_list = ['000300.SS', '399001.SZ', '000001.SS']
-hk_index_tickers_list = ['^HSI', '^HSCE', '^HSCI']
-
+au_index_tickers_list = ['^AXJO', '^AXKO',
+                         '^AORD', '^GSPC', 'ACWI', 'GLD']
+us_index_tickers_list = ['^GSPC', '^NDX', '^DJI', '^W5000', 'ACWI', 'GLD']
+cn_index_tickers_list = ['000300.SS', '399001.SZ',
+                         '000001.SS', '^GSPC', 'ACWI', 'GLD']
+hk_index_tickers_list = ['^HSI', '^HSCE', '^HSCI', '^GSPC', 'ACWI', 'GLD']
+msci_index_tickers_list = ['ACWI', 'ACWX', 'EFA', '^GSPC', 'GLD']
 
 FUNDAMENTALS_RAW_COLUMNS = [
     "Net Profit Margin",

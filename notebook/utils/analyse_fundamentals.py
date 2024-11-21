@@ -364,7 +364,8 @@ def get_fundamentals_dfs(first_end_of_quarter, historical_prices, TICKER, MARKET
                        "AU" else TICKER if MARKET == "US" else
                        f"{TICKER}.SS" if MARKET == "CN" and TICKER[0] == '6' else
                        f"{TICKER}.SZ" if MARKET == "CN" and TICKER[0] == '0' else
-                       f'{TICKER}.HK' if MARKET == "HK" else TICKER)
+                       f'{TICKER}.HK' if MARKET == "HK" else
+                       TICKER if MARKET == "MSCI" else TICKER)
 
     # get balance sheet, concat, sort and change index to date
     balance_sheet_df = get_balance_sheet_df(object, TICKER)

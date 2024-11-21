@@ -230,7 +230,11 @@ def get_monthly_stats(returns_df_dict: str, ticker: str, start_period: str, end_
         regression_end_period = returns_df_dict[ticker].index[-1]
 
         # fit regression to get beta and alpha
-        X = returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None].loc[regression_start_period:regression_end_period][
+        X = returns_df_dict["^AORD" if market == 'AU' else
+                            '^GSPC' if market == 'US' else
+                            '000300.SS' if market == 'CN' else
+                            '^HSI' if market == 'HK' else
+                            'ACWI' if market == 'MSCI' else '^GSPC'].loc[regression_start_period:regression_end_period][
             f"M_Return - rf (%)"
         ]
         y = returns_df_dict[ticker].loc[regression_start_period:regression_end_period][
@@ -389,7 +393,7 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     Plot the correlation matrix.
 
     Parameters:
-        - correlation_df: pd.DataFrame
+        - correlation_df: pd.DataFrame, the correlation matrix to plot
         - ticker: str, the stock ticker symbol for the plot title
     """
     plt.figure(figsize=(10, 8))
@@ -400,6 +404,13 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     plt.yticks(range(len(correlation_df.columns)), correlation_df.columns)
     plt.colorbar()  # Colour bar with the custom colormap
     plt.title(f"{ticker} Monthly Return Correlation Matrix")
+
+    # # If the number of tickers is less than 6, add correlation values to the heatmap
+    # if len(correlation_df.columns) < 10:
+    for i in range(correlation_df.shape[0]):
+        for j in range(correlation_df.shape[1]):
+            plt.text(j, i, f"{correlation_df.iloc[i, j]:.2f}",
+                        ha="center", va="center", color="black")
 
     # Save the plot as a PNG image
     plt.savefig(f"../outputs/{ticker}_correlation_matrix.png")
@@ -415,7 +426,9 @@ def fetch_ticker_price(ticker: str, index_tickers: list, market: str) -> tuple:
         f"{ticker}.SS" if (ticker not in index_tickers and market == 'CN' and ticker[0] == '6') else \
         f"{ticker}.SZ" if (ticker not in index_tickers and market == 'CN' and ticker[0] == '0') else \
         f"{ticker}.HK" if (
-            ticker not in index_tickers and market == 'HK') else ticker
+            ticker not in index_tickers and market == 'HK') else \
+        ticker if (ticker not in index_tickers and market == 'MSCI') else \
+        ticker
     return ticker, get_prices(ticker_with_suffix, "2019-06-01")
 
 
@@ -523,15 +536,15 @@ def plot_returns_comparative(
         )
 
     aord_monthly_returns = filter_returns(
-        monthly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
+        monthly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else 'ACWI' if market == 'MSCI' else '^GSPC'][[
             'M_Return (%)']], first_end_of_quarter
     )
     aord_quarterly_returns = filter_returns(
-        quarterly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
+        quarterly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else 'ACWI' if market == 'MSCI' else '^GSPC'][[
             'Q_Return (%)']], first_end_of_quarter
     )
     aord_yearly_returns = filter_returns(
-        yearly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else None][[
+        yearly_returns_df_dict["^AORD" if market == 'AU' else '^GSPC' if market == 'US' else '000300.SS' if market == 'CN' else '^HSI' if market == 'HK' else 'ACWI' if market == 'MSCI' else '^GSPC'][[
             'Y_Return (%)']], first_end_of_quarter
     )
 
@@ -578,7 +591,7 @@ def plot_returns_comparative(
         x_monthly + bar_width,
         aord_monthly_returns,
         bar_width,
-        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)" if market == 'HK' else "ACWI" if market == 'MSCI' else "^GSPC (%)",
         aord_color,
         x_labels_monthly,
     )
@@ -635,7 +648,7 @@ def plot_returns_comparative(
         x_quarterly + bar_width,
         aord_quarterly_returns,
         bar_width,
-        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)" if market == 'HK' else "ACWI" if market == 'MSCI' else "^GSPC (%)",
         aord_color,
         x_labels_quarterly,
     )
@@ -688,7 +701,7 @@ def plot_returns_comparative(
         x_yearly + bar_width,
         aord_yearly_returns,
         bar_width,
-        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)",
+        "^AORD (%)" if market == 'AU' else "^GSPC (%)" if market == 'US' else "^000300.SS (%)" if market == 'CN' else "^HSI (%)" if market == 'HK' else "ACWI" if market == 'MSCI' else "^GSPC (%)",
         aord_color,
         x_labels_yearly,
     )
@@ -919,7 +932,7 @@ def get_historical_dividends(TICKER: str, historical_prices_dict: dict, market: 
 
     # Convert the 'Date' column to AEST
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else 'US/Eastern' if market == 'MSCI' else 'US/Eastern')
 
     # Now make it timezone unaware but still a timestamp
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
@@ -944,7 +957,7 @@ def plot_dividends(TICKER: str, historical_dividends: pd.DataFrame, historical_p
     historical_dividends = historical_dividends.reset_index()
     historical_dividends['Date'] = pd.to_datetime(historical_dividends['Date'])
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_convert(
-        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else 'US/Eastern' if market == 'MSCI' else 'US/Eastern')
     historical_dividends['Date'] = historical_dividends['Date'].dt.tz_localize(
         None)
 
@@ -1018,7 +1031,7 @@ def get_historical_splits(TICKER: str, historical_prices_dict: dict, market: str
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else 'US/Eastern' if market == 'MSCI' else 'US/Eastern')
 
     # Now make it timezone unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(
@@ -1046,7 +1059,7 @@ def plot_splits_over_time(TICKER: str, historical_prices_dict: dict, market: str
 
     # Convert the 'Date' column to AEST
     historical_splits['Date'] = historical_splits['Date'].dt.tz_convert(
-        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else None)
+        'Australia/Sydney' if market == 'AU' else 'US/Eastern' if market == 'US' else 'Asia/Shanghai' if market == 'CN' else 'Asia/Hong_Kong' if market == 'HK' else 'US/Eastern' if market == 'MSCI' else 'US/Eastern')
 
     # Now make it timezone-unaware but still a timestamp
     historical_splits['Date'] = historical_splits['Date'].dt.tz_localize(None)
