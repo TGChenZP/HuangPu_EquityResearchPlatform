@@ -406,11 +406,11 @@ def plot_correlation(correlation_df: pd.DataFrame, ticker: str):
     plt.title(f"{ticker} Monthly Return Correlation Matrix")
 
     # # If the number of tickers is less than 6, add correlation values to the heatmap
-    # if len(correlation_df.columns) < 10:
-    for i in range(correlation_df.shape[0]):
-        for j in range(correlation_df.shape[1]):
-            plt.text(j, i, f"{correlation_df.iloc[i, j]:.2f}",
-                        ha="center", va="center", color="black")
+    if len(correlation_df.columns) < 10:
+        for i in range(correlation_df.shape[0]):
+            for j in range(correlation_df.shape[1]):
+                plt.text(j, i, f"{correlation_df.iloc[i, j]:.2f}",
+                         ha="center", va="center", color="black")
 
     # Save the plot as a PNG image
     plt.savefig(f"../outputs/{ticker}_correlation_matrix.png")

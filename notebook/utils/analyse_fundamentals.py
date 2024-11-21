@@ -77,7 +77,7 @@ def create_compound_key_features(
                 if 'Expense' in col \
                     and col not in ['Total Expenses', 'Interest Expense'] \
                         and 'Income Expense' not in col:
-                    stock_fundamentals['Net Profit'] -= stock_fundamentals[col]
+                    stock_fundamentals['Net Profit'] -= stock_fundamentals[col].fillna(0)
 
     except KeyError as e:
         stock_fundamentals["Net Profit"] = np.nan
