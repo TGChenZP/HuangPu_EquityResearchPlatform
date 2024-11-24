@@ -33,7 +33,7 @@ This document outlines the benchmarks used for comparisons across different mark
 - **GLD (Gold)**: A measure of gold prices, representing the precious metals market.
 - **ACWI (MSCI ACWI Index)**: Tracks the performance of stocks from both developed and emerging markets worldwide.
 
-Below are the benchmarks specific to each market, with highlights indicating the indices used for **Sharpe ratio calculations** in each region.
+Below are the benchmarks specific to each market, with highlights indicating the indices used for **Sharpe ratio calculations** in each market.
 
 
 
