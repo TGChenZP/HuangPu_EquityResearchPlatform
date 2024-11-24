@@ -258,3 +258,49 @@ def get_same_gics_ASX_MCap_weights(interested_ticker: str, asx_companies_directo
         return pd.DataFrame()
 
     return same_industry_ASX_tickers_mcap_df
+
+
+def nearest_three_month(input_date=None):
+    """
+    Returns the date of the nearest three-month period for a given date, taking off one month.
+
+    Args:
+    - input_date (datetime.date or str, optional): The input date. If not provided, defaults to today's date.
+      If input_date is a string, it should be in 'YYYY-MM-DD' format.
+
+    Returns:
+    - str: The nearest three-month period in 'YYYY-MM' format.
+    """
+    if input_date is None:
+        date = dt.today()
+    elif isinstance(input_date, str):
+        date = dt.strptime(input_date, "%Y-%m-%d")
+    else:
+        date = input_date
+
+    # Subtract one month
+    year = date.year
+    month = date.month
+
+    if month in [1, 2, 3]:
+        year -= 1
+        nearest_month = 12
+    elif month in [4, 5, 6]:
+        nearest_month = 3
+    elif month in [7, 8, 9]:
+        nearest_month = 6
+    elif month in [10, 11, 12]:
+        nearest_month = 9
+
+    return f"{year}-{nearest_month:02d}"
+
+
+def get_first_end_of_quarter(last_end_of_quarter: str):
+    """ take in format 'YYYY-MM' and subtract 4 years from the first quarter """
+
+    year = int(last_end_of_quarter.split('-')[0])
+    month = int(last_end_of_quarter.split('-')[1])
+
+    year -= 4
+
+    return f"{year}-{month:02d}"
