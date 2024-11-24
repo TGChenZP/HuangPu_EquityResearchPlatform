@@ -1,8 +1,11 @@
 # Project HuangPu: Equity Analysis Platform
 
+This app generates a report consisting of price and fundemental statistics of equity and ETFs from yahoo finance. Reports for Australian Equity also contains comparatives with its MCap Weighted GICS Sector.
+
+The main function of the app is found in `./notebooks/generate_pdf.ipynb`
 
 ## Requirements
-Run ```requirements.txt```
+Run ```pip install -r requirements.txt```
 
 ## Instructions
 
@@ -16,9 +19,11 @@ Run ```requirements.txt```
    [US](https://au.investing.com/rates-bonds/u.s.-10-year-bond-yield-historical-data); [Chinese Mainland](https://au.investing.com/rates-bonds/china-10-year-bond-yield-historical-data); [Hong Kong SAR](https://au.investing.com/rates-bonds/hong-kong-10-year-bond-yield-historical-data)
 
 
-2. Run `stock_info.ipynb` to automatically retrieve asx company directories and asx gics
+2. Run `notebooks/get_stock_info.ipynb` to automatically retrieve asx company directories and asx gics
 
-3. Run `analysis.ipynb`, changing TICKER, MARKET to match needs.
+3. Run `notebooks/generate_pdf.ipynb`, changing TICKER, MARKET to match needs.
+
+4. Run `notebooks/delete_files.ipynb` to clear out images created while generating the report pdfs, to prevent storage cost
 
 ## Market Benchmarks
 
