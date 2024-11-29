@@ -1,5 +1,8 @@
 # Project HuangPu: Equity Analysis Platform
 
+![Logo of Project HuangPu](logo/WithText.jpg)
+
+
 This app generates a report consisting of price and fundemental statistics of equity and ETFs from yahoo finance. Reports for Australian Equity also contains comparatives with its MCap Weighted GICS Sector.
 
 The main function of the app is found in `./notebooks/generate_pdf.ipynb`
