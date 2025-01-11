@@ -109,7 +109,10 @@ def get_asx_companies_directory() -> pd.DataFrame:
 
     # clean Market Cap column
     asx_companies_directory_df['Market Cap'] = asx_companies_directory_df['Market Cap'].apply(
-        lambda x: float(x) if x.isnumeric() else float(x.lower()) if 'E+' in x else np.nan)
+        lambda x: float(x) if isinstance(x, str) and x.isnumeric() else
+        float(x) if isinstance(x, str) and 'E+' in x.lower() else
+        np.nan
+    )
 
     return asx_companies_directory_df
 
