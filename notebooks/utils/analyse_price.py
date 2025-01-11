@@ -32,15 +32,15 @@ def get_prices(
     for year in range(start_year, end_year + 1):
         if year == start_year:
             price_df = yf.Ticker(ticker).history(
-                interval=interval, start=start_date, end=f"{year}-12-31"
+                interval=interval, start=start_date, end=f"{year}-12-31", auto_adjust=False
             )
         elif year == end_year:
             price_df = yf.Ticker(ticker).history(
-                interval=interval, start=f"{year}-01-01", end=end_date
+                interval=interval, start=f"{year}-01-01", end=end_date, auto_adjust=False
             )
         else:
             price_df = yf.Ticker(ticker).history(
-                interval=interval, start=f"{year}-01-01", end=f"{year}-12-31"
+                interval=interval, start=f"{year}-01-01", end=f"{year}-12-31", auto_adjust=False
             )
 
         price_df_list.append(price_df)
@@ -60,7 +60,7 @@ def get_return(price_df: pd.DataFrame, interest_rate: pd.DataFrame, interval: st
     Get return of stock on a specified interval basis (last close price/last close price previous period - 1)
 
     Parameters:
-    - price_df: pd.DataFrame - DataFrame with stock prices (must have a 'Close' column and a DateTime index)
+    - price_df: pd.DataFrame - DataFrame with stock prices (must have a 'Adj Close' column and a DateTime index)
     - interest_rate: pd.DataFrame - DataFrame with interest rates
     - interval: str - Resampling interval ('M' for monthly, 'Q' for quarterly, 'Y' for yearly)
 
@@ -76,7 +76,7 @@ def get_return(price_df: pd.DataFrame, interest_rate: pd.DataFrame, interval: st
     last_close_price = price_df.resample(interval).last()
 
     # Calculate the return
-    return_series = last_close_price["Close"].pct_change() * 100
+    return_series = last_close_price["Adj Close"].pct_change() * 100
     return_series = return_series.to_frame(name=f"{interval}_Return (%)")
 
     # Format the index to display period correctly
@@ -750,22 +750,23 @@ def plot_close_price_with_dollar_lines(TICKER: str, historical_prices: dict):
 
     Parameters:
     - TICKER (str): The ticker symbol for the stock.
-    - historical_prices (dict): A dictionary where the key is the ticker symbol, and the value is a DataFrame containing the stock price data with a 'Close' column.
+    - historical_prices (dict): A dictionary where the key is the ticker symbol, and the value is a DataFrame containing the stock price data with a 'Adj Close' column.
     """
 
     # Create a new figure
     plt.figure(figsize=(12, 6))
 
     # Set the plot title
-    plt.title(f"{TICKER} Close Price")
+    plt.title(f"{TICKER} Adj Close Price")
 
     # Plot the closing prices
-    plt.plot(historical_prices[TICKER]["Close"], label=f"{TICKER} Close Price")
+    plt.plot(historical_prices[TICKER]["Adj Close"],
+             label=f"{TICKER} Adj Close Price")
 
     # Plot horizontal lines at each dollar interval
 
-    min_price = historical_prices[TICKER]["Close"].min()
-    max_price = historical_prices[TICKER]["Close"].max()
+    min_price = historical_prices[TICKER]["Adj Close"].min()
+    max_price = historical_prices[TICKER]["Adj Close"].max()
     diff = max_price - min_price
 
     # Set range based on price difference
